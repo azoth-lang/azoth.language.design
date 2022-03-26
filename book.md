@@ -1,0 +1,17 @@
+# The Design of the Azoth Language
+
+* [Introduction](introduction.md)
+* [Principles](principles.md)
+* [Terminology](terminology.md)
+* [Design Decisions](design-decisions.md)
+  * [Lexical Structure](lexical.md)
+  * [Classes and Structs](classes-and-structs.md)
+  * [Namespaces](namespaces.md)
+  * [Control Flow](control-flow.md)
+  * [Naming and Conventions](naming-and-conventions.md)
+  * [Ownership, Borrowing, and Mutability](ownership-borrowing-mutability.md)
+  * [Primitive Types](primitive-types.md)
+  * [Raw Pointers](raw-pointers.md)
+  * [Operators](operators.md)
+  * [Memory Allocation](memory-allocation.md)
+* [Design Sources](design-sources.md)

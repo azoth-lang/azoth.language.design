@@ -23,9 +23,9 @@ In the initial designs, pointers were allowed to be null, like default pointers 
 
 ## Valid Pointer Types
 
-At first it was assumed it would be reasonable to have pointers to reference types. Eventually it was realized there was serious issues with this. As a result, only pointers to struct types are allow. This follows the precedent set by the C# language. Problems that would be caused by allow pointers to reference types include:
+At first it was assumed it would be reasonable to have pointers to reference types. Eventually it was realized there was serious issues with this. As a result, only pointers to struct types are allowed. This follows the precedent set by the C# language. Problems that would be caused by allowing pointers to reference types include:
 
 * References are "fat" they contain both a pointer to the data and a pointer to the vtable. To support calling methods on pointers to reference types, some pointers would have to be fat while other's weren't this would lead to confusion and issues with interop.
 * Pointer arithmetic doesn't make sense on pointers to reference types. Pointer arithmetic only makes sense when there is a contiguous sequence of values of the same exact type. They can't be different sizes or different subclasses that need different vtables.
 * How to declare a pointer to a reference? If `@Foo` is a pointer to a `Foo`, what is a pointer to a reference to `Foo`? Something like `@ ref Foo` could work but seems awkward and confusing.
-* Constructing pointer types from generics leads to confusion. Given a generic type `T`, if `T` is a struct then `@T` is a pointer to it, but if `T` is a class then `@T` is now a pointer to the data of the class, not a pointer to the reference. This is inconsisent and breaks the idea that references are effectively structs that refer to an object.
+* Constructing pointer types from generics leads to confusion. Given a generic type `T`, if `T` is a struct then `@T` is a pointer to it, but if `T` is a class then `@T` is now a pointer to the data of the class, not a pointer to the reference. This is inconsistent and breaks the idea that references are effectively structs that refer to an object.

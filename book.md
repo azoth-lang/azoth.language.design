@@ -9,7 +9,7 @@
   * [Namespaces](namespaces.md)
   * [Control Flow](control-flow.md)
   * [Naming and Conventions](naming-and-conventions.md)
-  * [Ownership, Borrowing, and Mutability](ownership-borrowing-mutability.md)
+  * [Reference Capabilities and Movement](reference-capabilities.md)
   * [Primitive Types](primitive-types.md)
   * [Raw Pointers](raw-pointers.md)
   * [Operators](operators.md)

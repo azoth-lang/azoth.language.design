@@ -28,3 +28,26 @@ second common example is references to the elements of a list that would be inva
 list was resized. Note that both of these have the character of using references to members of
 objects and so it might be possible to have a scheme that ruled these out while still allowing for
 the safe cases.
+
+## Mutate Expressions
+
+Originally, it was thought that when using a variable name one ought to receive only a read only
+alias to the object. It would then have been necessary to use a mutate expression to get a mutable
+alias even if the original alias supported mutation. This would be done as `mut x`. Thus any time
+one passed a mutable reference to a function it was necessary to use the `mut` keyword if it came
+from a variable or field. This was not necessary if the mutable reference was produced as the result
+of a function or constructor call. There was also an exception for the `self` parameter.
+
+This design reflected the idea that mutability should be restricted and visible. This principle is
+the reason that the default reference capability is read only and that the type inference will infer
+read only variable types in preference to mutably variable types. Mutate expressions made the
+mutation of locally controlled state visible.
+
+Early testing showed this was annoying when writing code and had very limited benefits. It was easy
+to forget to include the `mut` keyword. Of course, that could have been due to a lack of familiarity
+since there is no equivalent in other languages. However, it also seemed to have vary limited
+utility. Typically it is clear from the function name and context whether something would mutate.
+With read only being a strong default many variables already do not permit mutation. When the
+variable declaration already has to be declared mutable it seems very redundant to require it again
+at the use site. Removing this feature not only simplified the compiler, but streamlined the
+language and the code written in Azoth.

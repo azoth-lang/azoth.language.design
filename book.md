@@ -14,4 +14,5 @@
   * [Raw Pointers](raw-pointers.md)
   * [Operators](operators.md)
   * [Memory Allocation](memory-allocation.md)
+  * [Patterns](patterns.md)
 * [Design Sources](design-sources.md)

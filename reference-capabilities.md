@@ -51,3 +51,28 @@ With read only being a strong default many variables already do not permit mutat
 variable declaration already has to be declared mutable it seems very redundant to require it again
 at the use site. Removing this feature not only simplified the compiler, but streamlined the
 language and the code written in Azoth.
+
+## No Exclusive Mutation
+
+It is reasonable to imaging having a reference capability that allows other read aliases but has
+exclusive mutation access (i.e. no other mutable references). This is called transitional (`trn`) in
+Pony and was tentatively given the keyword `xmut` in Azoth. Having this would provide more precise
+types for mutable iterators. Without it, mutable iterators need to reference the collection with
+`lent iso` which restricts there to be no other readers of the collection. However, with `xmut` it
+could be `lent xmut` and allow other reading of the collection while it is being iterated. This is
+the primary use case found so far. However, it should also have uses when extracting methods because
+it may be necessary to have `xmut` to convey the capabilities of a reference in the middle of a
+method.
+
+Because of the above uses, adding `xmut` to Azoth was briefly tried. In the process, it was apparent
+that it adds complexity for the developer who has to decide when to use it versus other reference
+capabilities. It also has to work similar to `iso` where it must be changed to `mut` via flow typing
+because mutable references must be made to it in order to call methods and pass it to functions.
+That would then necessitate a way to recover `xmut` similar to but distinct from `move` (since
+`move` would recover `iso` which would sometimes not be possible even though recovering `xmut` was).
+
+Given the complexity it would add to the language, it didn't seem to be worth it for what appears to
+be an edge case on an already rarely used feature (i.e. mutable iterators). Also, Project Midori
+apparently was able to make due without it. Thus `xmut` has been removed. However, if more
+compelling use cases are found it may be added back to the language especially if a way to make it
+simpler for the developer to reason about can be found.

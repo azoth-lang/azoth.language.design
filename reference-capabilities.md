@@ -54,7 +54,7 @@ language and the code written in Azoth.
 
 ## No Exclusive Mutation
 
-It is reasonable to imaging having a reference capability that allows other read aliases but has
+It is reasonable to imagine having a reference capability that allows other read aliases but has
 exclusive mutation access (i.e. no other mutable references). This is called transitional (`trn`) in
 Pony and was tentatively given the keyword `xmut` in Azoth. Having this would provide more precise
 types for mutable iterators. Without it, mutable iterators need to reference the collection with
@@ -115,7 +115,7 @@ factory to create the `T` values and so they would not be accessed from `self`.
 
 Note that `rb` shares with both the outer layer of `b` and the inner layer of `b`. However, because
 `rb` does not allow writing, it does not interfere with freezing `b`. The declared types of both
-`Box::value` and `Read_Box::value` are valid and seemly compatible. Even has the `Box::T` type
+`Box::value` and `Read_Box::value` are valid and seemly compatible. Even as the `Box::T` type
 parameter capability varies, it will be accommodated by the fact that `T` is declared `out` in
 `Read_Box`. Thus, if the above code were allowed, it would be a problem because now `rb.value: mut
 Shape` could be used to mutate the shape inside `b` that ought to now be constant.

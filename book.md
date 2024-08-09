@@ -10,6 +10,7 @@
   * [Control Flow](control-flow.md)
   * [Naming and Conventions](naming-and-conventions.md)
   * [Reference Capabilities and Movement](reference-capabilities.md)
+  * [Equality](equality.md)
   * [Primitive Types](primitive-types.md)
   * [Raw Pointers](raw-pointers.md)
   * [Operators](operators.md)

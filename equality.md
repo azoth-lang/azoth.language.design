@@ -52,3 +52,11 @@ checks, it is the least efficient way to compare values for equality.
 ### Implementing Equality with Inheritance
 
 **TODO:** Good example of why type checks are necessary when implementing equality.
+
+## Dictionary Key Equality
+
+In C#, an equality comparer can be provided when constructing the dictionary that is used to
+determine if the keys are equal. In some languages like Rust, that is determined statically at
+compile time by the type. One argument for the type based approach is it eliminates the question of
+how to compare two dictionaries that are using different equality comparers for their keys. A
+similar argument applies for sets.

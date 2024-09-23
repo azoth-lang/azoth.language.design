@@ -6,6 +6,8 @@ be the standard term and what I found myself calling them anyway.
 
 ## Numeric Types
 
+**TODO:** Update this section, the default size is now unlimited.
+
 Both Rust and Go use integer values to indicate the bit length of types. However, C# did not and it
 was already planning for 64 bit architectures. The numeric sizes were selected based on the
 following criteria:
@@ -62,7 +64,7 @@ confusing, still too short and the square brackets seem too valuable to give up 
 fundamentally want to discourage.
 
 For those reasons, various longer syntaxes were considered. Eventually, the idea of using the hash
-sign for all composite type constructors was hit upon. This grew on me as a good syntax for tuples.
+sign for all composite type initializers was hit upon. This grew on me as a good syntax for tuples.
 So `#(1, 2)` became the syntax with `#()` as an empty tuple. But note, I think actually other types
 could use this composite constructor if it made sense. For example, maybe math vectors should.
 

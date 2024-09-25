@@ -197,7 +197,47 @@ can thus guarantee that the initializer can be called for any subclass and produ
 `Self`. So a method returning `Self` can call required initializers with `Self.init(...)` to create
 new values of type `Self`.
 
+I am not sure what a consistent mental model of `Self` types is supposed to be. There seem to be
+three independent aspects in play.
+
+1. In protocols, it is an associated type referring to the class or struct that implements the
+   protocol.
+2. In classes and structs, it is an associated type referring to the true type of the instance.
+   `Self` cannot be used in an input context (e.g. as a method parameter type).
+3. A bridge rule requires that a method returning `Self` in a protocol must be implemented by a
+   class method returning `Self`.
+
+The consistency between `Self` in protocols and classes is that they are associated types
+constrained to be a subtype of the current type that will be automatically further constrained or
+set by subtypes. A major issue with the behavior of `Self` in protocols is that it makes a clear
+behavioral difference between protocols and classes or structs. As in C#, it treats the protocols as
+second class. It makes the first class or struct that implements the protocol special. I've
+described this as treating the class or struct type as "real" and the protocol as a convention or
+category.
+
 ### Scala Self Types
+
+In Scala there is a feature called "[self types](https://docs.scala-lang.org/tour/self-types.html)".
+It isn't quite a self type as being discussed here, but it has interesting parallels and is the
+context for what will be a true self type in Scala. So it is worth understanding.
+
+Self types are used in traits and enforce a constraint that all implementers of the trait must also
+implement another trait. This is very similar to, but distinct from, having a trait inherit from
+another trait. The distinction is subtle and I won't try to understand the benefits right now.
+
+As the [language designer states](https://github.com/scala/scala3/issues/7374), have a non-obvious
+syntax. Within a trait, an identifier and another trait are given followed by `=>` and within the
+scope after the arrow, the identifier is a reference to `this` with the given type (e.g. `self:
+SomeTrait => ...`). In place of a regular identifier, `this` can be used to that `this` has a
+changed type withing the scope (e.g. `this: SomeTrait => ...`). As the language designer states,
+self types have two effects.
+
+1. Restrict the type of `this` to a proper subtype of the current class
+2. Introduce an alias name for this.
+
+While Scala "self types" are not proper self types, they show an interesting and possibly desirable
+feature. Namely, being able to further constraint the `Self` type with some other trait. The next
+section further explores this.
 
 ### Scala This Type Plans
 

@@ -17,3 +17,6 @@
   * [Memory Allocation](memory-allocation.md)
   * [Patterns](patterns.md)
 * [Design Sources](design-sources.md)
+* Design Notes
+  * [Self Antetype Design Notes](self-antetype.md)
+  * [Associated Types](associated-types.md)

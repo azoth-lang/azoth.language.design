@@ -253,6 +253,12 @@ value of the “current”
 type?](https://docs.scala-lang.org/tutorials/FAQ/index.html#how-can-a-method-in-a-superclass-return-a-value-of-the-current-type)"
 and clearly states that `this.type` isn't it. It also states there is no direct support for it.
 
+The FAQ links to [Returning the "Current" Type in
+Scala](https://tpolecat.github.io/2015/04/29/f-bounds.html) and [Advantages of F-bounded
+polymorphism over typeclass for return-current-type
+problem](https://stackoverflow.com/q/59813323/268898). The introduction of the former says that it
+is a common problem and frequently asked (as evidenced by it being in the FAQ).
+
 ### Scala This Type Plans
 
 The designer of Scala proposes replacing the "self type" feature described in the last section with
@@ -296,6 +302,19 @@ could construct other values with the type `This`. This feature appears to have 
 long time now.
 
 ### Rust Self Types
+
+Rust has a [`Self type`](https://doc.rust-lang.org/reference/paths.html#self-1) that in traits
+refers to the struct type that implements the trait and in other contexts is just a synonym for the
+current type. It seems to be a fairly simply thing in Rust and not a source of much complexity. It
+was hard to even find discussion of it online. I believe that this is because Rust doesn't have
+subtyping for structs. Thus, there is no ambiguity in what `Self` should refer to. Compare it to
+Swift where in protocols `Self` refers to the class or struct that conforms to the protocol but in
+classes and structs, it refers to the most concrete type of an instance. Those two behaviors
+collapse to the same thing when there is no subtyping between structs. Also, in Rust, traits are
+clearly categories of structs. That works better in Rust because of its low-level focus and
+references to trait typed values are comparatively rare. Instead, everything is generic over structs
+and uses traits to constrain that. Indeed, even having a reference to a value that is trait type
+requires the use of the `dyn` keyword.
 
 ### "ThisType for Object-Oriented Languages: From Theory to Practice"
 

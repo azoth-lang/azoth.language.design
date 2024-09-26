@@ -316,9 +316,152 @@ references to trait typed values are comparatively rare. Instead, everything is 
 and uses traits to constrain that. Indeed, even having a reference to a value that is trait type
 requires the use of the `dyn` keyword.
 
-### "ThisType for Object-Oriented Languages: From Theory to Practice"
+### ThisType for Object-Oriented Languages: From Theory to Practice
 
-By Sukyoung Ryu
+The paper *`ThisType` for Object-Oriented Languages: From Theory to Practice* by Sukyoung Ryu
+tackles the challenges of a self type. It refers to them as `ThisType`s. The paper first describes
+the problems and use cases and then proposes solutions at both the type theory and practical
+languages levels. Here, I'll focus on the language level proposals and discussions.
+
+In this formulation, self types are the type of the special `self` reference. However, if that were
+simply equivalent to the type of the enclosing class of the method then the `Self` type would be
+unsound. They note that previous researchers suggested two restrictions that prevent the
+unsoundness.
+
+> 1. Disable subtyping between a type and the type of its superclass when the superclass provides
+methods whose types include [input] occurrences of a `This` type.
+> 2. Disallow a binary method invocation when the compile-time type of the receiver is not an *exact
+class type*, which is the declared type and not any of its strict subtypes.
+
+The first option is far too restrictive and disallows subclassing anytime `Self` is used as a
+parameter type. Basically limiting them to what `Rust` supports. However, since in most object
+oriented languages, it is valid for one trait to implement another trait and for those to be used as
+types, I think this would effectively outlaw the use of `Self` types in parameters to methods in
+traits. While I don't fully understand the second, they argue and give examples (which if correct)
+show that it is also to restrictive.
+
+To address these limitations, to support more methods with `ThisType`d formal parameters, they
+enhance the type system with *exact type capture*, *named wildcards*, and *exact type inference*,
+and also introduce *runtime type matching*. To support more methods with `ThisType`d results, they
+provide *virtual constructors*. Let us consider each of those.
+
+In their terminology, exact object types are "record types" while inexact object types are
+"existential record types". As best I can tel from a quick reading of the discussion of the theory,
+they replace the standard types in a language which would normally be exact with inexact ones that
+are existential. This mirrors how directly using a protocol type in Swift is an existential type.
+The record types then become the exact types and may not have a subtyping relationship with each
+other. Instead, they substitute a "specializes" relationship between the record types. The exact
+record types are not subtypes of each other, but they are subtypes of the existential types. (Aside:
+it is probably a coincidence but it is strange how strongly that mirrors Azoth idea that there is a
+trait type introduced by each class but logically, there is also a true type for the class which is
+apparent as the type of `self`. That is because `self` has access to private members that no other
+reference has access to. Does that mean that you could access the private members of another
+instance if you could determine that it had the same exact type?)
+
+With that background, they introduce *exact class types*. For a class `C` the exact class type is
+written `#C`. Note that this and other types will in fact be allowed in code. Exact class types can
+be used in Java instance of tests and for casting. For these:
+
+* An object creation expression `new C(...)` has type `#C`.
+* `#C <: C`, but *not* vice versa.
+* `#C <: #C` and `null <: #C` but `#C` is a supertype of no other types.
+
+They introduce a special type variable `This` that can be regarded as an implicitly declared type
+variable in the class. A `This` type appearing in the definition of a class (or interface) `C`
+denotes the runtime type of the special variable `this`.
+
+* `This <: C`, but *not* vice versa
+* `This <: This` and `null <: This` but `This` is a supertype of no other types. It is not a
+  supertype of `C` (or `#C`). To see why, note that `this` can be bound to an object of a subclass
+  of `C` at runtime.
+
+Finally, they introduce *exact type parameterization* so that `C</X/>` denotes the type of an object
+*that has a declared class type `C` and a runtime exact type `X`*. A type `C</X/>` is well formed if
+`X` represents an exact type `#D` where `D` is `C` or a subclass of `C`, and a well-formed type
+`C</X/>` is equivalent to `X`. They then treat all class declarations as having implicitly declared
+type parameters as `class C</This/> extends B</This/> {...}`. This is very much like the CRTP, but
+while `C</This/> <: This`, `C<X>` is not a subtype of `X` as it is with the CRTP. They then assume
+that every inexact class type `C` is implicitly `C</~/>` where `~` is a wildcard for some exact type
+`#D` that makes `C</#D/>` well form. Also, `C</X/> <: C</~/>` for any `X` in their type system. They
+liken this to Java wildcard types and point out that `C</~/>` is conceptually equivalent to an
+existential type.
+
+With all that infrastructure set up, *exact type capture* is the introduction of "fresh type
+variables to represent the runtime types of variables declared as a class type." This means that
+when type checking method calls on a class `C`, they introduce a fresh type variable `X` and replace
+`This` in the signature with `C</X/>`. I believe this just explains how to type check method calls
+without having to deal directly with the existential type.
+
+Next they introduce *named wildcards*. Named wildcards let you provide a name for the exact type
+wildcards to allow the programmer to specify the type relationships between parameters. They give
+the example of a compare method declaration `int compare(Ordered</X/> a, Ordered</X/> b)`. Here the
+programmer is able to indicate that the two parameters should have the same exact type. Another
+example given is `Object</X/> id2(Object</X/> o) { return o; }`. This clarifies the relationship
+between the the parameter and return types. It is unclear to me why it is necessary to introduce
+this complexity. Couldn't the same effect be achieved by `int compare<T>(T a, T b) where T: Ordered`
+and `T id2<T>(T o) { return o; }` respectively? Would that not have the same effect of assigning the
+same wildcards to the appropriate types? In Azoth, there would be a difference that these methods
+would become generic over struct types, but in Java it seems like these would be identical. Though I
+suppose it depends on how you define wildcards to work.
+
+The final thing they introduce to improve parameters is *exact type inference*. This is a system
+that infers exact types in a flow sensitive manner. That reduces the need for the developer to use
+exact type annotations. Basically, this just means that within a method, local variable exact type
+wildcards are inferred. For example, if you declare a variable `BN p1 = x.getPrev();` when the
+parameter was `BN</X/> x` then the type of p1 is inferred to be `BN</X/>` (assuming a proper
+definition of `getPrev()`). This is only necessary when the method parameters use named wildcards.
+(They use JastAdd in their implementation!).
+
+Methods returning `This` have an issue that the only value a method has of type `This` is `this`. To
+provide a way around this, they introduce *virtual constructors* that act as a factory method. "An
+invocation of a virtual constructor is dynamically dispatched based on the runtime type of the
+receiver and generates an object of the same runtime type as the receiver." They allow a class to
+declare only one virtual constructor. A subclass may then inherit, override or hide (i.e. C# `new`)
+the virtual constructor. If the subclass wishes to change the parameters of the virtual constructor
+it must hide the superclass virtual constructor. When a subclass hides the superclass virtual
+constructor, it must redefine all methods returning `Self`. Virtual constructors are invoked with
+`new This(...)` and declared with `This(...) { /* body */ }`. (I believe there is no syntax for
+override vs hide, it is determined by whether the parameters match.)
+
+They give an example where all the above isn't sufficient and so they introduce a *runtime type
+match*. This allows the programmer to test whether two objects are of the same exact type at
+runtime. The syntax is `classesmatch (x,y) { /* then-block */ ... } else { /* else-block */ ... }`
+and is akin to matching on type in C# or Java with `is`. Flow typing is used so that within the then
+block of the class match, the two variables are known to have the same exact type and so methods
+taking `This` parameters can be called on them. They use this to code an example where a function
+counts the number of pairs of equal points in a list of points that may not all be the same exact
+type.
+
+They describe in detail how their language features are compiled into plain Java bytecode through a
+process they call *inexactization*, which is very similar to type erasure. They also detail the
+interaction with other Java features like overload resolution and arrays. There testing showed that
+existing Java programs compiled with only minor additional type annotations.
+
+This paper presents lots of interesting ideas and describes a language that truly solves the self
+type problem. They describe lots of previous academic work and it seems none of those actually
+solved the problem. Instead, there were cases when runtime errors could occur or there were too
+sever of limitations. However, introducing to programmers syntax for exact class types (e.g. `#C`)
+and exact type parameterization (e.g. `C</X/>`) and requiring them to sometimes use named wildcards
+introduces too much complexity. That is made worse by the fact that most Java code does not require
+these features. So they become obscure language features that developers are less likely to
+understand and remember. It seems to me that depending on the proper behavior of existential types
+or wildcard types it should be possible to avoid many of those issues by using more type parameters
+on methods. Alternatively, if existential types are directly supported, that might be sufficient.
+The example uses of named wildcards might become `int compare(X a, X b) forSome X : Ordered` and `X
+id2(X o) forSome X { return o; }`. I think something like that would not have been allowed in Scala
+2 because existential types were part of the individual type declarations. Anther place where named
+wildcards might be critical is in field types. If you had to fields and wanted them both to be
+`C</X/>` how could you do that without introducing an unwanted type parameter to the class?
+
+Their idea of having only a single virtual constructor so that a subclass can hide it and override
+all methods returning `Self` is interesting but seems to cause problems. First, imposes the sever
+limitation of only allowing one virtual constructor. What if you wanted two virtual constructors
+with different parameter types? Second, the requirement to override all `Self` returning methods is
+too much. Many `Self` returning methods might be returning `self` yet one is forced to redefine
+them. Note this is more onerous than simple overriding since one is not allowed to call the base
+implementation in case it actually returns a base type. It would also interact poorly with `final`
+methods (i.e. `sealed` in C#). Can one not hide a virtual constructor if the superclass has a
+`final` method returning `This`?
 
 ## Framing
 
@@ -326,9 +469,20 @@ By Sukyoung Ryu
 
 ### Return Position Flavors
 
+* `Class`: refers to the first class that implements a trait (or to the current class within a class)
+* `Self`
+* `Derived`: refers to the next type below in the hierarchy
+
 ### Parameter Position Flavors
 
+* `Class`: refers to the first class that implements a trait (or to the current class within a class)
+* `Self`: refers to the
+* `Base`: the base class of a hierarchy?
+
 ## Ideas
+
+"To address this problem, Bruce and Foster [2004] proposed factory method patterns and Saito and
+Igarashi [2009] proposed nonheritable methods"
 
 ### Virtual Constructors
 
@@ -336,7 +490,7 @@ By Sukyoung Ryu
 
 ### Implemented "Abstract"
 
-A method with a body that still must be overridden in subclasses
+A method with a body that still must be overridden in subclasses aka `required`
 
 ## Use Cases
 

@@ -239,7 +239,61 @@ While Scala "self types" are not proper self types, they show an interesting and
 feature. Namely, being able to further constraint the `Self` type with some other trait. The next
 section further explores this.
 
+### Scala Singleton Types and `this.type`
+
+Scala has a feature called singleton types. A singleton type is a type which contains only a single
+value (see [There are more types than
+classes](https://typelevel.org/blog/2017/02/13/more-types-than-classes.html)). The syntax for
+singleton types is `p.type` where `p` is basically a reference. The singleton type `this.type` can
+be used as the return type of a method. However, it isn't a proper self type because "[there is only
+a single value that you can return when the return type is `this.value` and that value is
+`this`](https://users.scala-lang.org/t/guarantees-of-this-type/7822/3)". Actually, you can return
+`null` too. The Scala FAQ addresses the question of "[How can a method in a superclass return a
+value of the “current”
+type?](https://docs.scala-lang.org/tutorials/FAQ/index.html#how-can-a-method-in-a-superclass-return-a-value-of-the-current-type)"
+and clearly states that `this.type` isn't it. It also states there is no direct support for it.
+
 ### Scala This Type Plans
+
+The designer of Scala proposes replacing the "self type" feature described in the last section with
+a [proper self type](https://github.com/scala/scala3/issues/7374) they are calling This type (Since
+Scala uses `this` instead of `self`). He lays out a very clear plan for how they would work:
+
+> * Every class or trait `C` has an implicit `This` [associated] type declaration.
+>   * if `C` is final, the declaration is `type This = C`
+>   * otherwise the declaration is `type This <: C`
+>   * in an object o, the declaration is `type This = o.type`.
+>
+> * The type of `this` is `This`.
+>
+> * `This` types may also be declared explicitly.
+>   * The only legal form of such a declaration is with an upper bound: `type This <: B`.
+>   * The upper bound is joined with the implicit `This` type declaration. I.e. in class `C`, an
+> explicit declaration `type This <: B` would yield `type This <: B & C` as the final type of `This`.
+>
+> Once `This` types are introduced, self type declarations are redundant and can be dropped. A
+> definition like
+>
+> ```scala
+> class C { this: T => ... }
+> ```
+>
+> would be replaced by
+>
+> ```scala
+> class C { type This <: T; ... }
+> ```
+
+And later on:
+
+> There is one restriction we have to add: In a `new C`, the type of `This` is also implicitly set
+> to `C`. So `new C` is treated the same as `new C { }` for the purposes of `This` checking. `new
+> C{}` in turn expands to `new C{ type This = C }`. So if a base class has another idea of what
+> `This` is this would give an error. That's how we prevent illegal extensions.
+
+There is no discussion of how this would interact with using `This` as a parameter type or how one
+could construct other values with the type `This`. This feature appears to have been ignored for a
+long time now.
 
 ### Rust Self Types
 

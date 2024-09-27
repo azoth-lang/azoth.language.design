@@ -465,45 +465,272 @@ methods (i.e. `sealed` in C#). Can one not hide a virtual constructor if the sup
 
 ## Framing
 
+At the risk of prematurely selecting an approach, I think it is worth laying out some ideas about
+how to think about the `Self` type and the range of designs that are possible.
+
 ### Bounded Associated Type
 
-### Return Position Flavors
+First, it seems intuitively correct that the `Self` type is essentially an associated type generated
+by the compiler that is automatically constrained by the compiler. Consistent with the are:
 
-* `Class`: refers to the first class that implements a trait (or to the current class within a class)
-* `Self`
-* `Derived`: refers to the next type below in the hierarchy
+* The proposed design for Scala 3 `This` type
+* Swift existential types for protocols using `Self`
+* It is definitely seems to act like a type variable
+* It shouldn't be passed like it is a type parameter (though of course, associated types can be
+  transformed to type parameters).
 
-### Parameter Position Flavors
+The following rules seem to apply to the `Self` type:
 
-* `Class`: refers to the first class that implements a trait (or to the current class within a class)
-* `Self`: refers to the
-* `Base`: the base class of a hierarchy?
+* In a `struct` or `sealed` class `C`, `Self` = `C`
+* In any class or trait `T`, the constraint `Self <: T` applies
+* As in Scala 3 self types, it probably makes sense to allow an additional bound to be placed on the
+  `Self` type. So the users statement `associated type Self <: B` for some type `B` is equivalent to
+  `Self <: T & B`.
+
+### Flavors
+
+In the review of the prior art, it is clear that there are actually multiple flavors of self type
+and it isn't immediately obvious which one will be both implementable with Azoth and powerful enough
+to enable the desired use cases. The solution may not map cleanly to one of these flavors. It may be
+a mix of two of them. But the flavors will help clarify the problem. Let's explore and name each of
+the flavors so we can refer to them when looking at the use cases.
+
+#### `Class` Type
+
+Swift is the clearest example of this, though Rust is sort of an example too. In Swift protocols the
+`Self` type is mostly a type variable referring to the class or struct that conforms to the
+protocol. Due to lack of a good term for this, I am shorting it and calling this the `Class` type.
+Note that "concrete" would not be correct because if an abstract class implements the trait, then it
+would still be the `Class` type the trait refers to.
+
+A `Class` type does not then carry down to subclasses. It is only really meaningful within the trait
+and the implementing class can just use its own class name when overriding members of the trait that
+used `Class`. If `Class` is allowed to be used within a class or struct declaration, then it is a
+simple synonym for the name of the current class. Of course, it could be given a different meaning
+as how `Self` works in Swift class method return types, but for the sake of clarity, I will try to
+separate those concepts. That is, `Class` may be treated as a simple synonym for the containing
+class of a declaration with no special effect on subclasses. This is seen in Swift for parameters of
+method that conform to a protocol taking a parameter of type `Self`.
+
+Within a trait, `self <: Class`.
+
+#### `Derived` Type
+
+One major issue with the `Class` type is that it makes a clear distinction between traits and all
+other types. It treats traits as second-class citizens. In Azoth, all classes implicitly create a
+trait and there should be far less of a distinction between them. For example, changing an abstract
+class with no state into a trait should not cause a change in the behavior of the system. But if
+that abstract class implemented a trait that used the `Class` type, then it could. The `Class` type
+would not refer to a different class. The subclass of the removed abstract class. That is a real
+issue for intended design of Azoth.
+
+Trying to formulate a type like `Class` that is agnostic to the distinction between classes and
+traits, one might imagine a `Derived` type. This is a type variable that refers to the immediate
+subtype of this trait or class. There are several strange things about this. One is that at each
+level of the type hierarchy the `Derived` type variable refers to a different type. In this way, it
+would have to be more like an implicit type parameter that is implicitly passed in the declaration
+of the subtype. If so, it might be desirable that there was a way to "forward" on the `Derived` type
+between levels. That is, to indicate that a particular type should pass its own `Derived` type
+variable on as the implicitly passed type. Any class directly instantiated would have its `Derived`
+type variable set to itself.
+
+The impact on subtyping on having members taking parameters of type `Derived` or returning `Derived`
+is very confusing. At each level the type parameter is independent. Yet, there is will be subtype
+relationship where it will go strictly down the hierarchy. This would be fine for return types but
+for parameters types would require some way for the compiler to determine that the types were
+compatible.
+
+It is always the case that `self <: Derived`.
+
+#### `Root` Type
+
+For completeness, one can imagine another variation where the type variable refers to the root class
+or struct in the type hierarchy. This has the same problem as the `Class` type of treating trait
+types as second-class. It does however have the benefit of giving a consistent meaning to the `Root`
+type variable throughout the hierarchy so that there is no issue with subtyping. In languages like
+C# or Java, this would make `Root` a synonym for `Object` but in Azoth, `Any` is a trait and there
+is not root class.
+
+It is always the case that `self <: Root`.
+
+#### `Instance` Type
+
+The instance type is a type variable that will always refer to the true type of the current
+instance. This is what I think of as a true `Self` type. This is also the definition being used by
+the proposed Scala 3 `This` type and the paper on `ThisType`.
+
+Using `Instance` as a return type is relatively straightforward as shown in Swift classes. Using it
+as a parameter type poses many problems as described in the `ThisType` paper. In particular, it
+effectively makes every bare type that internally uses `Instance` into an existential type.
+
+It is most correct to say that `self: Instance`. That is that the `Instance` type is the true type
+of `self` not just a supertype.
+
+#### `Same` Type
+
+Another possible flavor of a self type is something that is not a true type variable. Instead the
+`Same` type is a synonym for the declaring type that requires that the `Same` type also be used when
+overriding. As such it violates subtyping to use it in input position.
 
 ## Ideas
+
+Here I will lay out various ideas that exist in the toolkit for tackling the challenges of self types.
 
 "To address this problem, Bruce and Foster [2004] proposed factory method patterns and Saito and
 Igarashi [2009] proposed nonheritable methods"
 
+### `required` Methods
+
+A method marked `required` would have an implementation but be required to be overridden in a
+subtype. The overriding method would not have to be `required`. This could help with methods
+returning self types. The exact rules would be:
+
+* A `required` method cannot be `abstract`
+* In a subclass a `required` method must be overridden. The override does not itself need to be
+  `required`.
+* A `sealed` class cannot have `required` methods.
+* A `required` method implementation returning a self type, treats the return type as a simple
+  synonym for the containing type name.
+* When calling a base required method from the overriding method, the return type of the base method
+  is treated as the base type.
+
+The final two rules are what makes them useful as factory methods for self types. Those rules are
+safe because the required method will return a value that is of the type of the class declaring the
+required method. That will satisfy any supertype methods being overridden. Any subtype will be
+forced to override the method and in so doing forced to return a value compatible with the self type
+return.
+
+This is not a great name for this. However, it is unclear what would be a better one. The `required`
+keyword is taken from the keyword used on Swift constructors which is similar but not quite the same
+situation. Saito and Garashi in *Matching `ThisType` to Subtyping* 2009 use `nonheritable`. Note
+that `sealed` with `Self` return type does not work because it could be sealed and returning `self`
+so it can't be taken as requiring the method be overridden.
+
 ### Virtual Constructors
+
+The `ThisType` paper and others have proposed virtual constructors and Swift has them as well. As
+noted before, the variation of virtual constructors proposed in the `ThisType` paper has issues. So
+here we propose a variation equivalent to Swift's approach.
+
+A constructor is marked virtual with the `required` attribute. This indicates that each subtype is
+required to have a constructor with matching parameters. The rules for virtual constructors are:
+
+* Virtual constructors return either the self type in question or the declaring type whichever is
+  more specific. (We are here leaving open any of the flavors discussed above.)
+* The `required` keyword allows for the fact that the constructor body actually "returns" the
+  declaring type. (See meaning of `required` on methods returning self.)
+* Any subtype must declare a compatible constructor with the `override` keyword to override the
+  required constructors. (Optionally, constructors could be "inherited" in some situations as done
+  in Swift. I think implicitly implemented would be the more correct term.)
+* Overriding constructors will have to be `required` themselves unless the type is `sealed`. This is
+  necessary since it will have a self return type.
+* Required constructors can then be called from within the type using `new Self(...)` and a virtual
+  call will be made. The return value will have the self type.
+
+An alternative design could have the `required` attribute be necessary only at the levels where `new
+Self(...)` is called. Though a required constructor would still have to be overridden in every
+subtype. Thereby making it clear what is really required and so if a supertype removed a required
+constructor it would be clear that the subtype constructors are no longer required.
 
 ### Same Type Test
 
-### Implemented "Abstract"
+This introduces a pattern match like syntax that allows one to type test that two values have the
+same self type. In the `ThisType` paper they use a flow sensitive type control flow construct.
+However, Azoth only uses flow sensitive typing for reference capabilities. When doing type checking,
+it requires pattern matching to assign a new name. Following that approach the straw man syntax
+`#(x, y) is let (x1, y2) and Self == Self` allows one to create new variable that the type system
+knows have the same exact type. (This really needs a better syntax.)
 
-A method with a body that still must be overridden in subclasses aka `required`
+### Exact Types
+
+I am not including exact types, exact type parameters etc. in the list of ideas. I already believe
+these are too complex to added to the surface syntax of Azoth. As such they are not worth exploring.
+I do want to point out though that if both supertype and subtype constraints are available then
+something like exact types can be simulated. Naming a type parameter or existential type variable
+`T` can be made to have an exact type by bounding it both above and below. If `C` is a class type
+the `T where T <: C and C <: T` makes `T` exactly `C`.
+
+It should be noted though that exact and inexact types may still be necessary for type checking with
+self types and reasoning about them.
 
 ## Use Cases
 
+This problem is very complex and has few obvious guiding principles. As such, a careful review of
+actual use cases will be a better guide to the correct design than an abstract understanding the a
+"correct" design.
+
 ### Clone
+
+Consider the problem of a trait and method that produces a clone of an object. The return value is
+expected to be of the same instance as the instance being cloned. The cloneable interface has been
+criticized in both C# and Java but we will use it here as a stand-in for a more specific clone or
+copy trait that does not have the same issues. In C# the `ICloneable` interface is used along with
+the `object.MemberwiseClone()` method. While in Java there is the `Cloneable` interface and the
+`object.clone()` method which performs a memberwise clone but throws an exception of the current
+class doesn't implement `Cloneable`. Both return `object` to the great frustration of everyone who
+tries to use them.
+
+What are the requirements for the cloneable use case? Each subclass should override the clone method
+so that it returns a new instance that has the same type as the current instance. Some edge cases
+are interesting. If you call `clone()` on a variable of type `Cloneable` you expect to receive a
+`Cloneable`. However, as noted in the sections about proxies, a proxy class may not want to return a
+value that is not of the proxy type. For example, a proxy for an object across the network may wish
+to return a local clone. One can theorize other cases where one might want to return an unwrapped or
+simplified instance that is not of the same type. Consider the declaration below
+
+```azoth
+public trait Cloneable
+{
+    public fn clone() -> Instance;
+}
+```
+
+This seems to be stricter than what many versions of clone fundamentally demand. Even if some
+special exemption were made for proxy types, the unwrapping or simplifying case would likely be
+blocked. It seems what we want is that for all `T <: Cloneable`, `T.clone() -> T` where `T` is a
+standard inexact type. This would then be the `Same` type. Though others would argue that is too
+loose.
+
+```azoth
+public trait Cloneable
+{
+    public fn clone() -> Same;
+}
+```
+
+Review of flavors
+
+* `Class`: Incorrect, does not vary with subclasses.
+* `Derived`: Incorrect, even if it requires the use of `Derived` in subtypes, if over constrains the return value.
+* `Root`: Incorrect, does not vary with subclasses.
+* `Instance`: Possible, it is too constricting in some cases but matches many other cases definitions.
+* `Same`:
+
+Does clone require exact type?
 
 ### Copy Constructors
 
-### Equality and Comparison
+
+
+### Equatable
+
+### Comparable
+
+Shouldn't be allowed to compare any comparables
 
 ### Abstract Domains with Multiple Implementations?
 
+### Fluent API
+
+
+
 ### Proxies
+
+Clone may unproxy.
+
 
 ### Doubly Linked List
 
 A doubly linked list that inherits from a singly linked list since a doubly linked one can be traversed like a doubly linked one (Example from *On Binary Methods*)
+
+Does `set_next()` need an exact type for its parameter? Some papers think so. It does because `LinkedList` is a supertype of `BinaryLinkedList`

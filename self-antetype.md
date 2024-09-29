@@ -470,6 +470,8 @@ how to think about the `Self` type and the range of designs that are possible.
 
 ### Bounded Associated Type
 
+**NOTE:** This section is incorrect, but is being left in for reference.
+
 First, it seems intuitively correct that the `Self` type is essentially an associated type generated
 by the compiler that is automatically constrained by the compiler. Consistent with the are:
 
@@ -486,6 +488,28 @@ The following rules seem to apply to the `Self` type:
 * As in Scala 3 self types, it probably makes sense to allow an additional bound to be placed on the
   `Self` type. So the users statement `associated type Self <: B` for some type `B` is equivalent to
   `Self <: T & B`.
+
+### Implicit Parameter
+
+If a self type were supported in C#, it should be the case within a type that `typeof(This) ==
+this.GetType()`. Consider a concrete class `C` that is also the base class of several other classes
+`S1`... `S`*N*. For an instance of `C` constructed with `new C(...)` the `Self` type is `C`. But for
+an instance of `S`*N* constructed by `new S`*N*`(...)` its `Self` type is `S`*N*. If `Self` were an
+associated type then it would need to be constrained in `C` to `Self <: C`. But in order to be able
+to instantiate it, it would need to be declared `Self = C` in `C`. However, that would prevent
+subclasses from changing it. Thus, it cannot be an associated type. It must be some sort of implicit
+type parameter. (For example, Scala only allows [abstract type
+members](https://docs.scala-lang.org/tour/abstract-type-members.html) in abstract classes and
+traits. Swift only allows [associated
+types](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/generics/#Associated-Types)
+in protocols.)
+
+Thus, self types must be a constrained implicit type parameter that is passed the type itself
+whenever constructing them. Thus a constructor of type `T` always returns `T[Self = T]` (assuming
+the implicit parameter is made explicit as the type parameter named `Self`). This still leaves a
+need for existential types `T[Self = *]` and some sort of types match construct to enable calling
+binary methods. It also begs the question what the `Self` type of the inner `T` is in the type
+`T[Self = T]`.
 
 ### Flavors
 
@@ -566,18 +590,40 @@ effectively makes every bare type that internally uses `Instance` into an existe
 It is most correct to say that `self: Instance`. That is that the `Instance` type is the true type
 of `self` not just a supertype.
 
+While the type value of the `Instance` type parameter is not technically an exact type, the fact
+that it is almost always an unknown type means that it is very difficult to construct a scenario
+where it doesn't act like an exact type. Types do need to be invariant over their `Instance` type.
+Otherwise, incorrect binary method calls could be allowed. Furthermore, the `Instance` type needs to
+be treated has having the `Instance` associated type equal to itself. For example, consider a method
+that checks `x is Instance xInstance`. If this evaluated to true even though the true type of `x`
+was a subtype of `Instance`, it would allow binary methods to be called when they shouldn't be.
+However, since if the true type of an instance is `T` then `Instance` is effectively `T<Instance =
+T>` only other instances with the same exact type will match the type.
+
+Actually maybe it is actually an exact type. If type parameters are allowed to be fully self
+referential, then for some class `C` let `T = C[Instance = T]`. Then `T` really is an exact type.
+
+The above is incorrect, types must be covariant on the self type. This is necessary to use some type
+`T[Instance = *]` where `*` indicates an existential type. If the true type is `C` then it must be
+the case that `C[Instance = C] <: T[Instance = C]`. Otherwise the only type that would match
+`T[Instance = *]` would be `T[Instance = T]`.
+
+It is interesting to note that `T[Instance = C] <: C`. In the `ThisType` paper, they use equality
+instead because they make `Instance` a parameter over exact types.
+
 #### `Same` Type
 
 Another possible flavor of a self type is something that is not a true type variable. Instead the
 `Same` type is a synonym for the declaring type that requires that the `Same` type also be used when
-overriding. As such it violates subtyping to use it in input position.
+overriding. As such it violates subtyping to use it in input position. When used in return position,
+it does not force the method to be overridden in subtypes. Since it cannot be used for parameters it
+is very similar to just using covariant return types to narrow the return type of the method, just
+with an added requirement that it *must* be narrowed. That may make it not worth the complexity of
+adding.
 
 ## Ideas
 
 Here I will lay out various ideas that exist in the toolkit for tackling the challenges of self types.
-
-"To address this problem, Bruce and Foster [2004] proposed factory method patterns and Saito and
-Igarashi [2009] proposed nonheritable methods"
 
 ### `required` Methods
 
@@ -589,8 +635,10 @@ returning self types. The exact rules would be:
 * In a subclass a `required` method must be overridden. The override does not itself need to be
   `required`.
 * A `sealed` class cannot have `required` methods.
-* A `required` method implementation returning a self type, treats the return type as a simple
-  synonym for the containing type name.
+* A `required` method implementation returning a self type, treats the return type as a synonym for
+  the containing type name. Note though that for the `Instance` type it makes the associated type
+  also equal to the containing type rather than an existential type. Thus it effectively restricts
+  the return type to be exactly the containing type.
 * When calling a base required method from the overriding method, the return type of the base method
   is treated as the base type.
 
@@ -644,7 +692,7 @@ knows have the same exact type. (This really needs a better syntax.)
 ### Exact Types
 
 I am not including exact types, exact type parameters etc. in the list of ideas. I already believe
-these are too complex to added to the surface syntax of Azoth. As such they are not worth exploring.
+these are too complex to add to the surface syntax of Azoth. As such they are not worth exploring.
 I do want to point out though that if both supertype and subtype constraints are available then
 something like exact types can be simulated. Naming a type parameter or existential type variable
 `T` can be made to have an exact type by bounding it both above and below. If `C` is a class type
@@ -662,21 +710,21 @@ actual use cases will be a better guide to the correct design than an abstract u
 ### Clone
 
 Consider the problem of a trait and method that produces a clone of an object. The return value is
-expected to be of the same instance as the instance being cloned. The cloneable interface has been
-criticized in both C# and Java but we will use it here as a stand-in for a more specific clone or
-copy trait that does not have the same issues. In C# the `ICloneable` interface is used along with
-the `object.MemberwiseClone()` method. While in Java there is the `Cloneable` interface and the
-`object.clone()` method which performs a memberwise clone but throws an exception of the current
+expected to be of the same instance type as the instance being cloned. The cloneable interface has
+been criticized in both C# and Java but we will use it here as a stand-in for a more specific clone
+or copy trait that does not have the same issues. In C# the `ICloneable` interface is used along
+with the `object.MemberwiseClone()` method. While in Java there is the `Cloneable` interface and the
+`object.clone()` method which performs a memberwise clone but throws an exception if the current
 class doesn't implement `Cloneable`. Both return `object` to the great frustration of everyone who
 tries to use them.
 
 What are the requirements for the cloneable use case? Each subclass should override the clone method
 so that it returns a new instance that has the same type as the current instance. Some edge cases
 are interesting. If you call `clone()` on a variable of type `Cloneable` you expect to receive a
-`Cloneable`. However, as noted in the sections about proxies, a proxy class may not want to return a
-value that is not of the proxy type. For example, a proxy for an object across the network may wish
-to return a local clone. One can theorize other cases where one might want to return an unwrapped or
-simplified instance that is not of the same type. Consider the declaration below
+`Cloneable`. As noted in the sections about proxies, a proxy class may want to return a value that
+is not of the proxy type. For example, a proxy for an object across the network may wish to return a
+local clone that is not proxied. One can theorize other cases where one might want to return an
+unwrapped or simplified instance that is not of the same type. Consider the declaration below.
 
 ```azoth
 public trait Cloneable
@@ -687,9 +735,9 @@ public trait Cloneable
 
 This seems to be stricter than what many versions of clone fundamentally demand. Even if some
 special exemption were made for proxy types, the unwrapping or simplifying case would likely be
-blocked. It seems what we want is that for all `T <: Cloneable`, `T.clone() -> T` where `T` is a
-standard inexact type. This would then be the `Same` type. Though others would argue that is too
-loose.
+blocked. It seems what we want is for all `T <: Cloneable`, `T.clone() -> T` where `T` is a standard
+inexact type. This would then be the `Same` type. While some would argue that is too loose, it would
+be too strict if proxies etc. were truly forced to return the same type
 
 ```azoth
 public trait Cloneable
@@ -698,13 +746,25 @@ public trait Cloneable
 }
 ```
 
+Implementing the `Cloneable` trait that returns `Same` is probably trivial. It is possible to simply
+override the method and provide a concrete implementation returning `new T(...)` where `T` is the
+current type. On the other hand, implementing `Cloneable` returning `Instances` without complex
+factory patterns or a magic memberwise clone method, will require some additional language features.
+Specifically, virtual constructors, required methods, or both are required. I think the possible
+implementations are fairly straightforward, so I will not spell them out.
+
 Review of flavors
 
 * `Class`: Incorrect, does not vary with subclasses.
-* `Derived`: Incorrect, even if it requires the use of `Derived` in subtypes, if over constrains the return value.
+* `Derived`: Incorrect, even if it requires the use of `Derived` in subtypes, if over constrains the
+  return value.
 * `Root`: Incorrect, does not vary with subclasses.
-* `Instance`: Possible, it is too constricting in some cases but matches many other cases definitions.
-* `Same`:
+* `Instance`: Possible, it is too constricting in some cases but matches many other cases
+  definitions.
+* `Same`: Possible, too loose by some definitions.
+* Covariant Return: It could be argued that all that is really needed here is regular covariant
+  return types and developers can narrow the return type as it makes sense to do so. That way
+  proxies etc. do not have to return the same type if it makes sense.
 
 Does clone require exact type?
 

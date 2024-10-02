@@ -725,6 +725,83 @@ the `T where T <: C and C <: T` makes `T` exactly `C`.
 It should be noted though that exact and inexact types may still be necessary for type checking with
 self types and reasoning about them.
 
+## Unorganized Thoughts
+
+**NOTE:** at about this point it became clear that I was still confused about certain things. So I
+began to just make notes and have thoughts to grope toward a solution. This section records that.
+
+***
+
+`Self` is a type parameters where in any type `T`, `Self <: T`. To override a method, that uses
+`Self`, one must also use `Self` because that is what you know to be of type `Self`. **`self:
+Self`**. Required methods and virtual constructors let on instantiate instances of type `Self`.
+
+***
+
+The challenge is to invoke a binary method. The same instance check creates a type parameter `I <:
+T` where `x: I` and `y: I` but that doesn't seem sufficient because two normal instances that where
+both `I` would not be safe to call a binary method on. This is where you need existential types and
+type parameters.
+
+***
+
+`Self` is not an associated type because of how it works in a concrete base class. Generally, an
+associated type is either abstract or once set cannot be changed in subtypes. Note how Scala
+associated types are only allowed in traits and abstract classes. However, the `Self` type will have
+the class type in constructed instances of a concrete base type at the same time that it will have a
+different value in subclasses.
+
+***
+
+Three kinds of types `T[*]` (existential on `Self`), `T[*X]` (named existential on `Self`),
+`T[*Self]` (need a better notation) aka `#T` aka `T[$]` (exact type where `Self` is recursively
+defined i.e. `T = T.Self`).
+
+***
+
+The same type test operation creates a type variable `X[$] <: C` for the constraint `C`. And both
+variables have that type, so you can call binary methods.
+
+***
+
+If `T` derives from `B` then `T[*] <: B[*]` but it is not the case that `T[$] <: B[$]` (sometimes
+that will hold, but it cannot be generally assumed or taken as true). So it is actually invariant in
+the type parameter, but the existentials allow subtyping. The recursive formula for self types
+amount to exact types but are more complex because they would allow types like `T[C[D[*]]]`.
+
+***
+
+What is instead of exact types you really treat it as an invarient type parameter that you can pass
+by name? `int Compare<T>(Ordered<Self=T> a, Ordered<Self=T> b)`. That is essentially what you have
+to write in .NET now. `int Compare(Ordered<*T> a, Ordered<*T> b)`. Maybe it is an optional first
+type parameter? Must be explicit when using as method parameter? `Ordered<Self=*>` or
+`Ordered<Self>`.
+
+***
+
+Once can use `Self` in return position all the time.
+
+The `Self` parameter is an implicit first parameter. Prefix a parameter with `:` to pass the self
+parameter. `int Compare<T>(T a, T b) where T: Comparable<:T>`.
+
+But, `where T: Comparable` already implies `T: Comparable<:T>` right?
+
+For `Comparable`, you want it to act a little more like an associated type `trait Comparable<in T =
+Self>`? The `in` here implies that it isn't an invariant `Self` parameter.
+
+***
+
+```azoth
+trait Comparable
+{
+    associated type T (default Self);
+}
+```
+
+***
+
+Write down why use associated type. Concrete type implies assoc. It is a property.
+
 ## Use Cases
 
 This problem is very complex and has few obvious guiding principles. As such, a careful review of
@@ -823,15 +900,16 @@ Shouldn't be allowed to compare any comparables
 
 ### Fluent API
 
-
-
 ### Proxies
 
 Clone may unproxy.
-
 
 ### Doubly Linked List
 
 A doubly linked list that inherits from a singly linked list since a doubly linked one can be traversed like a doubly linked one (Example from *On Binary Methods*)
 
 Does `set_next()` need an exact type for its parameter? Some papers think so. It does because `LinkedList` is a supertype of `BinaryLinkedList`
+
+### Sorting Ordered List
+
+Sorting a list of things that implement `Ordered`

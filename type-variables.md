@@ -37,6 +37,10 @@ fractional quantities that had an associated type for the result to rounding to 
 support euclidean norm in a generic way. There was no general way to express that `Length` *
 `Length` gave `Area` and the square root of area was `Length`.
 
+Returning to the `Iterator` example in Rust. The reason it is wrong is because the type being
+iterated over isn't a property of the class of iterator. It is a property of the particular
+instance.
+
 I believe part of the confusion is that Rust and Swift allow something that they shouldn't. They
 allow a generic type parameter to be assigned to an associated type of a trait. Consider the Rust
 [`Map<I, F>` struct](https://doc.rust-lang.org/std/iter/struct.Map.html) which is returned by the

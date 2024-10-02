@@ -871,8 +871,6 @@ Does clone require exact type?
 
 ### Copy Constructors
 
-
-
 ### Equatable
 
 It is slightly odd, but reasonable to compare any two equatables.
@@ -891,6 +889,9 @@ public trait Equatable
     }
 }
 ```
+
+Marking a type `Equatable` creates a "domain" of types that can be equated. Every subtype must be
+able to properly handle equality to every other subtype.
 
 ### Comparable
 

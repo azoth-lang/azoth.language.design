@@ -16,6 +16,7 @@
   * [Operators](operators.md)
   * [Memory Allocation](memory-allocation.md)
   * [Patterns](patterns.md)
+  * [Type Variables](type-variables.md)
 * [Design Sources](design-sources.md)
 * Design Notes
   * [Self Antetype Design Notes](self-antetype.md)

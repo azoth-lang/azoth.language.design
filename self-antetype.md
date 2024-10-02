@@ -215,6 +215,30 @@ second class. It makes the first class or struct that implements the protocol sp
 described this as treating the class or struct type as "real" and the protocol as a convention or
 category.
 
+Interesting Observation: Swift does not equate `Self` to the current type when the class is final.
+
+```swift
+import Foundation
+
+class Base {
+  public func test() -> Self {
+    return self;
+  }
+}
+
+final class Derived: Base {
+  public override func test() -> Self {
+    return Derived();
+  }
+}
+```
+
+After thinking about Swift's design longer, I think that the documentation describes it in a
+misleading way. It is more proper to think of it as two things. When used in the return type, it is
+a covariant type variable equal to the type of the current instance. When used in the parameters of
+a protocol method, it is an invariant associated type that will be set to the class or struct
+implementing the protocol. That is the proper way to think about Swift `Self` type.
+
 ### Scala Self Types
 
 In Scala there is a feature called "[self types](https://docs.scala-lang.org/tour/self-types.html)".
@@ -773,6 +797,23 @@ Does clone require exact type?
 
 
 ### Equatable
+
+It is slightly odd, but reasonable to compare any two equatables.
+
+```azoth
+public trait Equatable
+{
+    fn Equals(self, other: Self) -> bool;
+
+    fn Equals(self, other: Equatable) -> bool
+    {
+        if(#(self, other) is let (x, y) and Self == Self)
+            return x.Equals(y); // Calls other overload
+
+        return false;
+    }
+}
+```
 
 ### Comparable
 

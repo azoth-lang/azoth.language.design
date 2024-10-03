@@ -237,7 +237,8 @@ After thinking about Swift's design longer, I think that the documentation descr
 misleading way. It is more proper to think of it as two things. When used in the return type, it is
 a covariant type variable equal to the type of the current instance. When used in the parameters of
 a protocol method, it is an invariant associated type that will be set to the class or struct
-implementing the protocol. That is the proper way to think about Swift `Self` type.
+implementing the protocol. That is the proper way to think about Swift `Self` type. This eliminates
+the need for the strange bridge between protocols and classes described above.
 
 ### Scala Self Types
 
@@ -800,7 +801,80 @@ trait Comparable
 
 ***
 
-Write down why use associated type. Concrete type implies assoc. It is a property.
+There are two valid models of associated types.
+
+1. Associated type that is covariant.
+
+    Thus can be overridden in subtypes. Associated types are invariant by default. So once assigned
+    in a type, they cannot be reassigned in subtypes. However, they can be marked `in` or `out` and
+    that allows them to be reassigned in a subtype in a way that was compatible with the variance.
+    Thus `Self` is an implicit `out` associated type that gets implicitly reassigned in each subtype
+    to the current type.
+
+2. Invariant Type Parameter
+
+    All uses of types are implicitly existential types where the implicit `Self` type parameter is
+    existential. Note, this is not an associated type because since it is invariant, one wouldn't be
+    allowed to reassign it in a subclass.
+
+***
+
+I'm not convinced that the limitation that you can only implement a trait with an associated type
+once makes sense. It might be a limitation of treating traits as second class citizens. For example,
+imagine a class implements multiple traits representing that you exist in multiple categorization
+schemes. Each of those categorization schemes may have a separate implementation of comparable. So
+your class would be comparable in multiple ways. But that doesn't mean that it doesn't make sense
+for `Comparable` to use an associated type.
+
+***
+
+The associated type for `Equatable` or `Comparable` ought to sort of default to the type of the
+current class. However, it could be set at any level in the hierarchy as long as it is being set to
+the current type. It can be bounded by self `type T where Self <: T where T <: Equatable { T = T }`
+(Where `T` means two different things in the two uses inside of curly braces). But that still isn't
+sufficient because you shouldn't be allowed to set it as being equatable to a subtype or supertype
+that is still in the inheritance chain. For example, if a class is halfway down the chain, it should
+not be allowed to declare that it is equatable to the type above it in the chain. That doesn't make
+any sense. Likewise, equatable to the type below it in the chain doesn't make sense. So there must
+be some additional constraint that requires that it be set to the current type when it is being set.
+
+***
+
+I've been thinking that the `Self` type maybe shouldn't include the reference capability. Likewise,
+I've thought it shouldn't be included when dealing with the type parameter of equatable and
+comparable. Now that I am thinking that equatable and comparable should use associated types, maybe
+the answer is that associated types don't have reference capabilities but type parameters do. That
+actually makes sense because when you declare a type outside of a class, you are not saying it has a
+specific capability. So when you put the type declaration inside the class and it becomes virtual,
+you still aren't talking about a type with a reference capability. You are talking about a bare
+type. This really seems like it might be the right thing.
+
+***
+
+Maybe the self referential type constraint (i.e. `type T where Self <: T where T <: Equatable { T = T }`) does work for the associated domain type of
+`Equatable` and `Comparable`. `Comparable` has an associated type `Domain` where the `Domain`
+implements `Comparable` and `Domain.Domain = Domain`. That means that whatever type ever gets
+assigned to `Domain` has to be `Self` I think?
+
+***
+
+The constraint on the `Domain` of `Equatable` described above is not sufficient because it would let
+you name a different type that already implemented `Equatable` on itself, but that constraint plus
+the supertype of the self type might be sufficient. (I am no longer sure what I meant by that.)
+
+***
+
+If you can implement a trait multiple times then it isn't sufficient, because you could name a
+supertype that implements the trait with a different associated type.
+
+***
+
+If you can implement a trait multiple times there is a case where those constraints would not be
+sufficient. Imagine `C <: B <: A`. Both `B` and `C` implement `Comparable`. `C` does so properly.
+`B` tries to set the associated domain of comparison as `C`. I think that satisfies both the
+constraints. No, no, it isn't going to satisfy the self type constraint. So maybe there is no
+problem because if `B` implements it correctly and `C` names `B` as the domain, then it has just
+restated a true fact that is already there. The two implementations of the trait are identical.
 
 ## Use Cases
 
@@ -893,9 +967,13 @@ public trait Equatable
 Marking a type `Equatable` creates a "domain" of types that can be equated. Every subtype must be
 able to properly handle equality to every other subtype.
 
+While it is reasonable that `Equatable` could mean that they are equatable to any other `Equatable` type, it is probably better to use a `Self` bounded associated type. That is more consistent with `Comparable`.
+
 ### Comparable
 
-Shouldn't be allowed to compare any comparables
+Shouldn't be allowed to compare any comparables.
+
+Comparable is an example where a `Self` bounded associated type is the correct thing to use.
 
 ### Abstract Domains with Multiple Implementations?
 
@@ -907,9 +985,11 @@ Clone may unproxy.
 
 ### Doubly Linked List
 
-A doubly linked list that inherits from a singly linked list since a doubly linked one can be traversed like a doubly linked one (Example from *On Binary Methods*)
+A doubly linked list that inherits from a singly linked list since a doubly linked one can be
+traversed like a doubly linked one (Example from *On Binary Methods*)
 
-Does `set_next()` need an exact type for its parameter? Some papers think so. It does because `LinkedList` is a supertype of `BinaryLinkedList`
+Does `set_next()` need an exact type for its parameter? Some papers think so. It does because
+`LinkedList` is a supertype of `BinaryLinkedList`
 
 ### Sorting Ordered List
 

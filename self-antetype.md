@@ -876,6 +876,117 @@ constraints. No, no, it isn't going to satisfy the self type constraint. So mayb
 problem because if `B` implements it correctly and `C` names `B` as the domain, then it has just
 restated a true fact that is already there. The two implementations of the trait are identical.
 
+## Reformulation of Self Types
+
+Having thought through what makes sense for self types more, I think it is clear there are only a few possibilities and those are what we should evaluate with the use cases. These possibilities are composed of some core functionality along with advanced functionality that may not be necessary.
+
+### Basics
+
+The `Self` type is an implicit type variable. It is always constrained by the declared type it is
+used in. When used inside of a type declaration `A`, `Self <: A`. The `Self` type is always the type
+of the current instance. It acts like an implicitly declared and set covariant associated type. That
+is, each type declaration sets the `Self` type to itself, but subtypes set it to themselves. This is
+possible because it is covariant and can be assigned new values as long as those values are more
+specific.
+
+The `self` instance variable is of the `Self` type (i.e. `self: Self`).
+
+In `struct`s and `sealed` classes, the `Self` type is known to be equal to the declaring type.
+
+### Output
+
+Since `Self` is covariant it can be used safely in output position and for local variables. Within a method, the only instance known to be of the `Self` type is `self`. In order to be able to return any other instances, from a method returning `Self` that is not in a `struct` or `sealed` class, required methods or required virtual constructors or both are needed.
+
+#### Required Methods
+
+A `required` method is one that has an implementation, but must be overridden in any subtype. Within
+a required method returning `Self`, the return type is instead treated as being equal to the
+declaring type. This allows the method to return new instances of the declaring type. This is safe
+because any subtype will be forced to override the method and return an instance of type `Self`.
+Thus, the method implementation will be called only when the instance is of the declaring type or a
+call to a base method is being made. In the case that a base call is made to a required method, the
+return type is again treated as being the declaring type of `base`. Also, due to this, `required`
+methods must inherently be `open` in Azoth. It is undecided whether that means the `open` keyword is
+required or whether it is implied as it is for `abstract`. Since `required` could be applied to
+methods that do not return `Self`, perhaps `open` should be required only when a `required` method
+returns `Self`.
+
+Required methods are thus able to act as factory methods for instances of `Self`.
+
+#### Required Virtual Constructors
+
+Another option is to have `required` virtual constructors. A `required` virtual constructor must be
+overridden in subtypes and each overriding constructor must also be marked `required`. These
+constructors can then be invoked with `new Self(...)` and have a return type of `Self`. In this way,
+they can also act as factories for values of type `Self`. The Swift language already has virtual
+constructors with designated and convenience constructors. That is a lot of infrastructure and
+complexity. If it is decided that they are necessary to Azoth, then `required` constructors are an
+obvious extension. However, if not, then it probably makes more sense to stick with only required
+methods.
+
+### Input
+
+Because `Self` is covariant, it can't be used in input position in methods. This can be an issue for
+binary methods. That is methods that one would want to take a parameter of `Self` in addition to the
+`self` parameter that is already of type `Self`. If binary methods need to be supported then there
+must be a way to first allow subtyping even though having `Self` in input position violates
+subtyping and also, to establish the proper type relationships to allow binary methods to be called.
+
+To enable this, we first must introduce the concept of exact types and existential types. An exact
+type for the type `T` is written `#T` and is the type of all instances of type `T`. However, it does
+not include any subtypes. So if `S <: T` it is not the case that `S <: #T` or `#S <: #T`. However,
+it is always the case that `#T <: T`. (Note: `#T` is not valid Azoth syntax. It is merely notation
+for discussing exact types.)
+
+Now let us introduce existential types. For each type, there is an associated `Self` type that is
+implicit. By default it is implicitly given an existential type. That is "there exists" some type
+that satisfies it. This is like Java wildcard types. We allow the implicit `Self` type parameter to
+be listed first among the parameter list but distinguish it by prefixing with a `:`. This when using
+some type `T`, what we want to do is instead use `T[:*]` where `*` is the wildcard type. Note that
+if `S` was previously a subtype of `T`, then `S[:*] <: T[:*]`. One important point is that the
+existential wildcards must range over *exact* types only. (Note: At his point, we are not proposing
+that `T[:*]` is valid Azoth syntax. It is merely notation for discussing exact types.)
+
+Now, with those two concepts in place, we change the meaning of using some type name `Foo`. If `Foo`
+is a struct or sealed class than `Foo` is refers to the exact type `#Foo`. Otherwise, `Foo` refers
+to the existential type `Foo[:*]`.
+
+#### Named Wildcards
+
+It may be necessary to relate existential types to each other. To do that, one could introduce a
+syntax of naming existential type parameters. The syntax would be something like `fn example(a:
+Foo[:*T], b: Foo[:*T])`. This declares a function `example` taking two parameters implementing the
+`Foo` trait that are known to have the same `Self` type. This would then allow binary methods to be called on them.
+
+#### `Self` Match
+
+This is a new pattern match or control flow structure that conditions on two variables being of a
+given type *and also* having the same `Self` type. This way we can take to variables that are not
+known to have the same `Self` type and recover a case where they are known to have the same `Self`
+type and binary methods can be called on them.
+
+I am not sure what a good syntax for this would be. One could treat it like pattern matching on a
+tuple. Options for that include:
+
+* `#(a, b) is let x, y and Self == Self`
+* `#(a, b) is let x: T[:*X], y: T[:*X]`
+
+Alternatively, one could have a special match construct like `a, b are_same x, y : T`.
+
+Or one could imagine an actual control structure that induces flow typing. `self_same a, b { ... }`.
+
+### Associated Type Bounded by `Self`
+
+There is a case not covered by the above. This case is an associated type bounded by `Self`. It
+seems there might be a common pattern of an associated type `T` in trait `Trait` with a bound like
+`where Self <: T where T <: Trait and T.T == T`. This constraint is tight enough almost ensure that
+the associated type can only be populated with the declaring type in whatever type sets it. However,
+it is complex and there is one case it doesn't quite prevent. So perhaps it would make sense to
+create a special syntax for it. One idea is `where T <: Trait[:Self]`. But it is unclear whether
+that is correct since it would have a specific meaning. It is also dependent on the syntax
+introduced for named wildcards. If named wildcards are needed and aren't added, this syntax would be
+confusing. It is quite difficult to come up with a good syntax. Perhaps `self type T`?
+
 ## Use Cases
 
 This problem is very complex and has few obvious guiding principles. As such, a careful review of

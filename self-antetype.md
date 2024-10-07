@@ -878,9 +878,11 @@ restated a true fact that is already there. The two implementations of the trait
 
 ## Reformulation of Self Types
 
-Having thought through what makes sense for self types more, I think it is clear there are only a few possibilities and those are what we should evaluate with the use cases. These possibilities are composed of some core functionality along with advanced functionality that may not be necessary.
+Having thought through what makes sense for self types more, I think it is clear there are only a
+few possibilities and those are what we should evaluate with the use cases. These possibilities are
+composed of some core functionality along with advanced functionality that may not be necessary.
 
-### Basics
+### `Self` Basics
 
 The `Self` type is an implicit type variable. It is always constrained by the declared type it is
 used in. When used inside of a type declaration `A`, `Self <: A`. The `Self` type is always the type
@@ -893,9 +895,12 @@ The `self` instance variable is of the `Self` type (i.e. `self: Self`).
 
 In `struct`s and `sealed` classes, the `Self` type is known to be equal to the declaring type.
 
-### Output
+### Output `Self`
 
-Since `Self` is covariant it can be used safely in output position and for local variables. Within a method, the only instance known to be of the `Self` type is `self`. In order to be able to return any other instances, from a method returning `Self` that is not in a `struct` or `sealed` class, required methods or required virtual constructors or both are needed.
+Since `Self` is covariant it can be used safely in output position and for local variables. Within a
+method, the only instance known to be of the `Self` type is `self`. In order to be able to return
+any other instances, from a method returning `Self` that is not in a `struct` or `sealed` class,
+required methods or required virtual constructors or both are needed.
 
 #### Required Methods
 
@@ -924,7 +929,7 @@ complexity. If it is decided that they are necessary to Azoth, then `required` c
 obvious extension. However, if not, then it probably makes more sense to stick with only required
 methods.
 
-### Input
+### Input `Self`
 
 Because `Self` is covariant, it can't be used in input position in methods. This can be an issue for
 binary methods. That is methods that one would want to take a parameter of `Self` in addition to the
@@ -956,7 +961,8 @@ to the existential type `Foo[:*]`.
 It may be necessary to relate existential types to each other. To do that, one could introduce a
 syntax of naming existential type parameters. The syntax would be something like `fn example(a:
 Foo[:*T], b: Foo[:*T])`. This declares a function `example` taking two parameters implementing the
-`Foo` trait that are known to have the same `Self` type. This would then allow binary methods to be called on them.
+`Foo` trait that are known to have the same `Self` type. This would then allow binary methods to be
+called on them.
 
 #### `Self` Match
 
@@ -979,13 +985,15 @@ Or one could imagine an actual control structure that induces flow typing. `self
 
 There is a case not covered by the above. This case is an associated type bounded by `Self`. It
 seems there might be a common pattern of an associated type `T` in trait `Trait` with a bound like
-`where Self <: T where T <: Trait and T.T == T`. This constraint is tight enough almost ensure that
-the associated type can only be populated with the declaring type in whatever type sets it. However,
-it is complex and there is one case it doesn't quite prevent. So perhaps it would make sense to
-create a special syntax for it. One idea is `where T <: Trait[:Self]`. But it is unclear whether
-that is correct since it would have a specific meaning. It is also dependent on the syntax
-introduced for named wildcards. If named wildcards are needed and aren't added, this syntax would be
-confusing. It is quite difficult to come up with a good syntax. Perhaps `self type T`?
+`where Self <: T where T <: Trait and T.T == T`. Or in an alternative notations `where Self <: T
+where T <: Trait { type T = T}` or `where Self <: T where T <: Trait[.T = T]`. This constraint is
+tight enough almost ensure that the associated type can only be populated with the declaring type in
+whatever type sets it. However, it is complex and there is one case it doesn't quite prevent. So
+perhaps it would make sense to create a special syntax for it. One idea is `where T <:
+Trait[:Self]`. But it is unclear whether that is correct since it would have a specific meaning. It
+is also dependent on the syntax introduced for named wildcards. If named wildcards are needed and
+aren't added, this syntax would be confusing. It is quite difficult to come up with a good syntax.
+Perhaps `self type T`?
 
 ## Use Cases
 
@@ -1015,93 +1023,243 @@ unwrapped or simplified instance that is not of the same type. Consider the decl
 ```azoth
 public trait Cloneable
 {
-    public fn clone() -> Instance;
+    public fn clone(self) -> Self;
 }
 ```
 
-This seems to be stricter than what many versions of clone fundamentally demand. Even if some
-special exemption were made for proxy types, the unwrapping or simplifying case would likely be
-blocked. It seems what we want is for all `T <: Cloneable`, `T.clone() -> T` where `T` is a standard
-inexact type. This would then be the `Same` type. While some would argue that is too loose, it would
-be too strict if proxies etc. were truly forced to return the same type
+To implement this trait, one probably needs either `required` on the `clone()` method or needs to
+call a required virtual constructor. Presuming that some copy constructors exist it seems most
+straightforward to use `required` on the `clone()` method. Otherwise, one would be stuck trying to
+create a `required` constructor that can somehow properly clone.
+
+However, this version of `Cloneable` seems to be stricter than what some versions of clone want. A
+proxy could not return a non-proxy. The unwrapping or simplifying case would likely also be blocked.
+To loosen the requirements, we could switch to an associated type bounded by `Self`.
 
 ```azoth
 public trait Cloneable
 {
-    public fn clone() -> Same;
+    public out type Clone
+        where Self <: Clone
+        where Clone <: Cloneable[.Clone = Clone]
+
+    public fn clone(self) -> Same;
 }
 ```
 
-Implementing the `Cloneable` trait that returns `Same` is probably trivial. It is possible to simply
-override the method and provide a concrete implementation returning `new T(...)` where `T` is the
-current type. On the other hand, implementing `Cloneable` returning `Instances` without complex
-factory patterns or a magic memberwise clone method, will require some additional language features.
-Specifically, virtual constructors, required methods, or both are required. I think the possible
-implementations are fairly straightforward, so I will not spell them out.
+This trait allows each subtype to further refine the `Clone` result type. Implementing it is
+straightforward, but it is also possible to implement it incorrectly by not overriding it when one
+should. The covariant `out` does seem to work correctly with the advanced type constraint.
 
-Review of flavors
+Features Needed:
 
-* `Class`: Incorrect, does not vary with subclasses.
-* `Derived`: Incorrect, even if it requires the use of `Derived` in subtypes, if over constrains the
-  return value.
-* `Root`: Incorrect, does not vary with subclasses.
-* `Instance`: Possible, it is too constricting in some cases but matches many other cases
-  definitions.
-* `Same`: Possible, too loose by some definitions.
-* Covariant Return: It could be argued that all that is really needed here is regular covariant
-  return types and developers can narrow the return type as it makes sense to do so. That way
-  proxies etc. do not have to return the same type if it makes sense.
+Implementing `Cloneable` properly requires either:
 
-Does clone require exact type?
+* Output `Self`
+* `Self` Match
+
+Or
+
+* Associated Type Bounded by `Self`
 
 ### Copy Constructors
 
+In order to support copyable structs, special copy constructors may be needed. A copy constructor is
+essentially a required constructor. If a copy constructor is declared, then each subtype must
+provide its own copy constructor. The difference is that they are virtually dispatched on the
+parameter type. It does however seem that copy constructors may introduce more complexity than just
+have a special `copy` method and possibly a `Copyable` trait. In that case, `Self` would be used as
+an output type and required methods would be needed.
+
+Features Needed:
+
+* *Maybe* Required Constructors
+* *Maybe* Output `Self`
+* *Maybe* Required Methods
+
 ### Equatable
 
-It is slightly odd, but reasonable to compare any two equatables.
+There are at least two approaches to supporting `Equatable`.
+
+The advanced approach is built off the insight that while it is slightly odd, it is reasonable to
+compare any two equatables for equality. Thus the most basic implementation might be:
 
 ```azoth
 public trait Equatable
 {
-    fn Equals(self, other: Self) -> bool;
+    public fn Equals(self, other: Equatable) -> bool;
+}
+```
 
-    fn Equals(self, other: Equatable) -> bool
+But that requires type checks or something like the Scala `canEqual` method to properly implement
+equality. If one expects that for two things to be equal, they must always always be the same type,
+then one could extend the `Equatable` type to enforce that and simplify writing the equality check
+as:
+
+```azoth
+public trait Equatable
+{
+    protected fn equals(self, other: Self) -> bool;
+
+    public fn equals(self, other: Equatable) -> bool
     {
         if(#(self, other) is let (x, y) and Self == Self)
-            return x.Equals(y); // Calls other overload
+            return x.equals(y); // Calls other overload
 
         return false;
     }
 }
 ```
 
-Marking a type `Equatable` creates a "domain" of types that can be equated. Every subtype must be
-able to properly handle equality to every other subtype.
+However, another approach is to think that `Equatable` establishes a domain of equality. Within that
+domain, everything must be equatable to everything else. Types may not have to be identical for two
+values to be considered equal. To support this, the associated type bounded by `Self` pattern makes
+more sense.
 
-While it is reasonable that `Equatable` could mean that they are equatable to any other `Equatable` type, it is probably better to use a `Self` bounded associated type. That is more consistent with `Comparable`.
+```azoth
+public trait Equatable
+{
+    public type Domain
+        where Self <: Domain
+        where Domain <: Equatable[.Domain = Domain]
+
+    public fn equals(self, other: Domain) -> bool;
+}
+```
+
+Note that here `Domain` is invariant because even though it is used in output position, it doesn't
+really make sense to expand the domain of that can be checked for equality.
+
+We'll see in the next section that the latter approach is more consistent with comparison.
+
+Features Needed:
+
+Implementing `Equatable` properly requires either:
+
+* Output `Self`
+* `required` methods
+
+Or
+
+* Associated Type Bounded by `Self`
 
 ### Comparable
 
-Shouldn't be allowed to compare any comparables.
+While it is somewhat reasonable to imagine checking any to `Equatable`s for equality, it is not the
+case that any two `Comparable`s can be compared. Instead, `Comparable` must establish a domain
+within which items can be compared to each other. I am surprised that the Scala `Ordered` trait
+doesn't talk about using `canEqual` or something similar to check whether to values can be compared. The only reasonable way to implement `Comparable` is with a bounded associated type.
 
-Comparable is an example where a `Self` bounded associated type is the correct thing to use.
+```azoth
+public trait Comparable <: Equatable
+{
+    // The type is already declared, but we want to further constraint it
+    public override type Domain
+        where Domain <: Comparable[.Domain = Domain]
+
+    public fn compare_to(self, other: Domain) -> Ordering;
+}
+```
+
+Features Needed:
+
+* Associated Type Bounded by `Self`
 
 ### Abstract Domains with Multiple Implementations?
 
+**TODO:** This example is given in the ThisType paper, but I don't fully understand it yet.
+
 ### Fluent API
+
+In a fluent API, one might wish to make sure that specific steps returned `self`. This is a simple
+use of the `Self` return type.
+
+Features Needed:
+
+* Output `Self`
 
 ### Proxies
 
-Clone may unproxy.
+As partially already covered in other use cases, a proxy may wish to behave like another type. This
+is an argument against true binary methods. A `Self` bounded associated type allows the proxy to
+keep the associated type as a supertype and thereby unproxy or compare to an unproxied instance.
+
+Features Needed:
+
+* Associated Type Bounded by `Self`
 
 ### Doubly Linked List
 
-A doubly linked list that inherits from a singly linked list since a doubly linked one can be
-traversed like a doubly linked one (Example from *On Binary Methods*)
+Some sources give the example of a doubly linked list implementation that inherits from a singly
+linked implementation. Personally, I think that is strange and probably a bad idea. But it does
+potentially allow single linked list traversals to operate over the doubly linked list.
 
-Does `set_next()` need an exact type for its parameter? Some papers think so. It does because
-`LinkedList` is a supertype of `BinaryLinkedList`
+```azoth
+public class Linked_Node[E]
+{
+    public protected var elem: E;
+    public protected var next: Self;
+
+    public fn insert(self, node: Self)
+    {
+        Self tmp = self.next;
+        self.next = node;
+        node.next = tmp;
+    }
+
+    public fn insert_element(self, e: E)
+    {
+        Self newNode = self.make_node();
+        newNode.elem = e;
+        this.insert(newNode);
+    }
+
+    public required fn makeNode() -> Self
+        => new Linked_Node[E]();
+}
+
+public class Doubly_Linked_Node[E]: Linked_Node[E]
+{
+    public var previous: Self;
+
+    public fn insert(self, node: Self)
+    {
+        super.insert(node);
+        node.previous = this;
+        node.next.previous = node;
+    }
+    public required fn makeNode() -> Self
+        => new Doubly_Linked_Node[E]();
+}
+```
+
+They then give the code below as an example of client code that could cause problems. However, the
+other paper explains how exact type capture can allow the compiler to properly type such code.
+
+```azoth
+let head: LinkedNode[Integer] = ...;
+head.next.insert(head); // possibly ill-typed
+```
 
 ### Sorting Ordered List
 
-Sorting a list of things that implement `Ordered`
+Consider a function that wants to sort a list of items that implement `Comparable`. For that, we
+need not only that the list element type is `Comparable`, but that it is within the comparable
+domain. Or put another way, the `Domain` must not be abstract. I am not sure the best way to handle
+that. It may be the case that the Domain not being abstract is already a requirement. Just like you
+can't use a type as a type parameter when it has abstract static members.
+
+```azoth
+public fn sort[T](list: List[T])
+    where T <: Comparable, T.Domain
+{
+
+}
+```
+
+## Conclusion
+
+There is no proven need for input `Self` and it introduces a lot of complexity. It seems best to
+leave it out for now. However, it seems like output `Self` and associated types bounded by `Self`
+are both important to have. To support that, it seems required methods should also be supported.
+Required constructors should be supported only if virtual constructors are added for other reasons.

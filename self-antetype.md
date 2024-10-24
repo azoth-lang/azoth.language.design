@@ -987,8 +987,8 @@ There is a case not covered by the above. This case is an associated type bounde
 seems there might be a common pattern of an associated type `T` in trait `Trait` with a bound like
 `where Self <: T where T <: Trait and T.T == T`. Or in an alternative notations `where Self <: T
 where T <: Trait { type T = T}` or `where Self <: T where T <: Trait[.T = T]`. This constraint is
-tight enough almost ensure that the associated type can only be populated with the declaring type in
-whatever type sets it. However, it is complex and there is one case it doesn't quite prevent. So
+tight enough to almost ensure that the associated type can only be populated with the declaring type
+in whatever type sets it. However, it is complex and there is one case it doesn't quite prevent. So
 perhaps it would make sense to create a special syntax for it. One idea is `where T <:
 Trait[:Self]`. But it is unclear whether that is correct since it would have a specific meaning. It
 is also dependent on the syntax introduced for named wildcards. If named wildcards are needed and

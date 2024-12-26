@@ -11,7 +11,7 @@
   * [Naming and Conventions](naming-and-conventions.md)
   * [Reference Capabilities and Movement](reference-capabilities.md)
   * [Equality](equality.md)
-  * [Primitive Types](primitive-types.md)
+  * [Built-in Types](built-in-types.md)
   * [Raw Pointers](raw-pointers.md)
   * [Operators](operators.md)
   * [Memory Allocation](memory-allocation.md)

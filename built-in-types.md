@@ -1,16 +1,27 @@
-# Primitive Types
+# Built-in Types
 
-I'm not fond of the name "primitive type". For a while I called them "predefined types". That fit
-with the fact that some of them are actually defined in libraries. However, primitive type seems to
-be the standard term and what I found myself calling them anyway.
+I'm not fond of the name "primitive type". It doesn't have a clear definition that makes it obvious
+which types ought to count as primitives. Furthermore, there are types like `Any`, `Type`, `never`,
+and `void` that don't seem like they should be "primitive", but are still provided by the language.
+For a while I used the term "predefined types" instead. I have now settled on "built-in" types. This
+seems to be a standard term that expresses what they are. I use the "simple types" term from C# for
+the built-in value types.
 
 ## Numeric Types
 
+In the original design numeric types were named after their bit length (e.g. `int16`), but there
+were still fixed length types `int`, `uint`, and `float`. Those were the default sized types.
+However, later it was decided that `int`, `uint`, and `decimal` should provide arbitrary sized
+values.
+
 **TODO:** Update this section, the default size is now unlimited.
 
-Both Rust and Go use integer values to indicate the bit length of types. However, C# did not and it
-was already planning for 64 bit architectures. The numeric sizes were selected based on the
-following criteria:
+### Default Sized Types
+
+When the design had default fixed length types, here is how those lengths were determined. Both Rust
+and Go use integer values to indicate the bit length of types. However, C# did not and it was
+already planning for 64 bit architectures. The numeric sizes were selected based on the following
+criteria:
 
 1. Anything larger than 64 bit pointers is unlikely any time soon
 2. Old 32 bit machines could have 64 bit pointers
@@ -23,6 +34,22 @@ small enough memory use and enough digits of precision to be useful. Hence 32 bi
 their more than 9 digits were chosen as the default integer size while 64 bits were chosen for
 floats and decimals because their 32 bit versions had only 7 digits of precision.
 
+### Arbitrary Sized Numerics
+
+As Azoth was created from the previous language Adamant, it became higher level. At the same time I
+had been reading about the implementation of arbitrary precision integers. I became convinced that
+their performance could be made good enough for most cases. They also came with a enough advantages
+that it seemed worth it.
+
+Advantages:
+
+* Eliminates overflow errors
+* Developers don't need to consider bit size for every type
+* Eliminates an odd question of whether there should be synonyms for the default sized types (e.g.
+  if `int` is a 32-bit integer, should there also be an `int32` type that could be used for clarity.
+  If not, there were sort of random holes in the sized types since the defaults were chosen for
+  subjectively having enough precision.)
+
 ## Optional Type
 
 Different languages use different names for option types (see [Wikipedia Option type: Names and
@@ -32,11 +59,12 @@ make clear that developers should expect that for reference types it would be re
 efficiently as a null pointer. However, the name "nullable" seemed to carry with it too much history
 and implied that they were bad or dangerous. A more neutral name seemed appropriate. Looking at the
 options, it seemed that "optional" was the clearest. Both Java and Swift name option types that and
-they are two of the languages most concerned with clear names. Like Swift the `T?` syntax means it
-isn't necessary to write out the name optional normally.
+they are two of the languages most are concerned with clear names. Like Swift the `T?` syntax means
+it isn't necessary to write out the name optional.
 
 When considering what to name the two values of an option type, `Some[T]` and `none`. Seemed the
-clearly better choice.
+clearly better choice. However, that has been further simplified by eliminating the need for a
+`Some[T]` type.
 
 ## Tuples
 
@@ -46,10 +74,10 @@ too frequently used. It wouldn't be hard to create tuples in Azoth by declaring 
 overloaded on the number of type parameters or with a `Tuple[Values...]` type. That would certainly
 be done if they weren't included in the language. Additionally, lists of types are essentially tuple
 types so it will make working with generics easier. Given that, it makes sense to include them in
-Azoth. *Actually, declaring a non-primitive tuple type turns out to be quite difficult because of
-the interaction in the `params` keyword. The compiler needs to understand tuples. Declaring ways for
-the compiler to construct an arbitrary tuple like type would requiring tuples as parameters leading
-to a circular definition.*
+Azoth. *Actually, declaring a non-built-in tuple type turns out to be quite difficult because of the
+interaction in the `params` keyword. The compiler needs to understand tuples. Declaring ways for the
+compiler to construct an arbitrary tuple like type would requiring tuples as parameters leading to a
+circular definition.*
 
 In many other languages tuples have a syntax like `(x,y)` but that seems easily confused with
 grouping. Also, there is no good syntax for a tuple of one value. Some languages use `(x,)` which
@@ -57,7 +85,7 @@ just seems ridiculous. When the new operator was being used for all values inclu
 would be declared as `new (x,y);` and would not be ambiguous (that syntax could have been an issue
 for placement new). However, this would still not have been a very distinct syntax for tuples. For
 example, a new single tuple would be `new (x)` and new empty tuple would be `new ()`. Since Azoth
-does not have primitive arrays, the square bracket symbols are available for use with tuples. This
+does not have built-in arrays, the square bracket symbols are available for use with tuples. This
 provides a much more distinct syntax and has precedent in other languages. For example the language
 [E](https://en.wikipedia.org/wiki/E_(programming_language)) uses them for tuples. However, it was
 confusing, still too short and the square brackets seem too valuable to give up to a feature that I

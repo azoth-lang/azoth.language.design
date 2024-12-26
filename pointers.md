@@ -42,7 +42,7 @@ optional types.
 At first it was assumed it would be reasonable to have pointers to reference types. Eventually it
 was realized there was serious issues with this. As a result, only pointers to struct types are
 allowed. This follows the precedent set by the C# language. On C#, pointer may only be made to
-"unmanaged types". That is, primitive types and structs with unmagaed type. Problems that would be
+"unmanaged types". That is, primitive types and structs with unmanaged type. Problems that would be
 caused by allowing pointers to reference types include:
 
 * References are "fat" they contain both a pointer to the data and a pointer to the vtable. To
@@ -70,7 +70,7 @@ would guarantee that the value was of exactly type `T` and not some subclass.
 
 The problem with class value types is how to handle invoking methods on such a type. The methods of
 some class `C` expect to take their self parameter as a reference to `C`. When invoking a method,
-all that is available it a pointer to `^C` which cannot be converted to a reference. Attempting to
+all that is available is a pointer to `^C` which cannot be converted to a reference. Attempting to
 make the conversion opens up the possibility that some method could capture a reference to `self` in
 another object and produce an invalid reference to something that is actually not a garbage
 collected object.

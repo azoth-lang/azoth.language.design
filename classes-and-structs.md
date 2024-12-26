@@ -104,3 +104,35 @@ Non-private fields can be overridden with other fields or properties. This is ne
 class can subtype another class and must have a way of providing behavior for the accessible fields.
 This also has the advantage of allowing direct use of fields rather than making everything a
 property with "`get`" and "`set`" functions.
+
+## Against Convenience Initializers and Initializer Inheritance
+
+Swift has convenience initializers and allows them to be inherited to subclasses when all designated
+initializers are overridden. This seems to add lots of complexity to the language and add relatively
+little value. As such, I think it is a design mistake and something like it shouldn't be added to
+Azoth.
+
+Having initializers that call other initializers instead of the base class initializer makes sense.
+However, C# demonstrates that can be achieved without the complexity introduced in Swift. If you try
+to read the docs on
+[Initialization](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/)
+in Swift, esp. the sections [Initializer Delegation for Class
+Types](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/#Initializer-Delegation-for-Class-Types),
+[Initializer Inheritance and
+Overriding](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/#Initializer-Inheritance-and-Overriding),
+and [Automatic Initializer
+Inheritance](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/#Automatic-Initializer-Inheritance)
+you'll see the amount of confusing complexity these features add. That seems complex and difficult
+to keep straight in one's head.
+
+It is generally accepted now that using too much inheritance or having deep inheritance hierarchies
+is a bad idea. It is better to use protocols/interfaces/traits. Furthermore, Swift really encourages
+the use of structs over classes. So there shouldn't be too many classes that inherit from another
+class. Among those that do, initializer inheritance only kicks in when the subclass implements all
+designated initializers and there are convenience initializers to inherit. That ought it be a small
+percentage of all types then. So in that small percentage of cases, you have avoided the need to
+redeclare a few constructors on the subclass? Sure, that is nice, but not high-value. Not something
+you can't live without.
+
+The only answer I've found so far is that Objective-C had a similar feature of initializer
+inheritance.

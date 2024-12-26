@@ -12,6 +12,13 @@ programmer confusion.
   `never`. But in the course of implementing the compiler it was found that it didn't fully make
   sense to combine those into a single category. Further, since `void` really acts more like a
   special unit type, it was decided that it was misleading to apply the term "empty" to it.
+* "source": This is an improper abbreviation of "source code". In fact, "source" does not clearly
+  refer to code. Instead use "code" or "source code" (e.g. `CodeFile`).
+
+## Caution
+
+* "standard": Do not use the term standard to mean the typical or ordinary one. Prefer "ordinary"
+  for this. The term "standard" has too many meanings and can lead to confusion.
 
 ## Decisions
 

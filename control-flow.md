@@ -21,14 +21,14 @@ scope introduced, but it may not be visually apparent when it is not surrounded 
 
 ## `loop` Keyword
 
-As in Rust the justification is that the control flow analyzer treats it differently. Also, just
-makes the thing clearer.
+As in Rust the justification is that the control flow analyzer treats it differently. Also, it just
+makes the thing clearer than something like `while true`.
 
 ## `=>` Operator
 
 The expression evaluation operator was the result of trying to come up with a syntax for if
 expressions and after considering many different syntaxes, realizing that this was essentially the
-same problem as match, and Rust used `=>` for match expressions which I was likely to match just for
+same problem as match, and Rust used `=>` for match expressions which I was likely to copy just for
 familiarity.
 
 Before this syntax, the use of a keyword `is` was considered. It was thought of as mirroring the
@@ -68,13 +68,14 @@ let z = match v
 ```
 
 But using `is` for this was also inconsistent with with C#'s use of `is` for type checking. It
-seemed prudent to leave the `is` keyword available for that.
+seemed prudent to leave the `is` keyword available for that. (Indeed, later versions of the design
+adopted `is` for pattern matching.)
 
 ## `next` Instead of `continue`
 
 Most C family languages uses the `continue` keyword to go to the next iteration of a loop. Azoth
 does not. Instead, it follows Ruby and R in using a `next` keyword. There are two reasons for this.
-First, it conveys the meaning better. The continue keyword as always seemed like it should continue
+First, it conveys the meaning better. The continue keyword has always seemed like it should continue
 from the current point, not continue the next iteration. Second, when combined with a loop label it
 can become even more confusing. A statement like `continue outerLoop;` would read as if the current
 loop should be exited and the outer loop should continue where the inner loop stopped (i.e. the

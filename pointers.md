@@ -1,4 +1,4 @@
-# Raw Pointers
+# Pointers
 
 ## Syntax
 

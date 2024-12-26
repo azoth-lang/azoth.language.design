@@ -12,7 +12,7 @@
   * [Reference Capabilities and Movement](reference-capabilities.md)
   * [Equality](equality.md)
   * [Built-in Types](built-in-types.md)
-  * [Raw Pointers](raw-pointers.md)
+  * [Pointers](pointers.md)
   * [Operators](operators.md)
   * [Memory Allocation](memory-allocation.md)
   * [Patterns](patterns.md)

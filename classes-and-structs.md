@@ -136,3 +136,27 @@ you can't live without.
 
 The only answer I've found so far is that Objective-C had a similar feature of initializer
 inheritance.
+
+## `const copy` Default for Structs
+
+When the `const` and `move` modifiers were designed for classes and traits, they were carried onto
+structs with little thought. It just seemed to be obvious that they would be consistent on structs.
+However, at the time structs had a more clear distinction between `move` and `copy` structs. This
+was because move semantics originally existed only for structs and not to any classes. This meant
+that move worked differently than it does now. It was a special check as in Rust for a use of a
+moved value. It was only later that reference capabilities were applied to structs and it became
+clear that a moved struct was just an `id` struct. Also, copy structs sometimes require special copy
+constructors. Finally, non-`move` classes don't seem to be either `move` or `copy` (though really
+the reference itself is copied). So the decision was made to require the `copy` keyword on structs
+to distinguish them from `move` types and from classes.
+
+This led to a situation where the vast majority of structs ought to be declared `const copy`
+structs. Since they are intended for use as simple values. Mutable structs are useful mostly as
+pseudo references and movable structs may exist mostly for consistency. That is because most movable
+types will need to be classes so that they can easily be lent and because they will have more fields
+than belong in a struct.
+
+While thinking about the design of enums/discriminated unions it was realized that this led to very
+long declarations for simple things. For example, all enum like types would be `const copy struct`.
+It was thus decided to change structs so that `const copy` is the default. To declare a non-copy
+struct, use the `move` keyword. To declare a non-const struct, use the `mut` keyword.

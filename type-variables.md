@@ -1,6 +1,7 @@
 # Type Variables
 
-This section covers both generic types and associated types, collectively referred to as type variables.
+This section covers both generic types and associated types, collectively referred to as type
+variables.
 
 ## Use of Associated Types
 

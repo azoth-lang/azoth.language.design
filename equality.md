@@ -33,7 +33,8 @@ So, we would like to implement `IEquatable<IFixedList<T>>`. The first problem we
 this is not allowed because of variance. This makes sense since it effectively adds a method `bool
 Equals(IFixedList<T>? other)`. Such a method would normally violate the variance since a list of
 `Cat` could be upcast to a list of `Animal` and then have its equals method called with another list
-of animals which would not be safe (for some arbitrary method taking a list). This is the same problem as the `Contains` method.
+of animals which would not be safe (for some arbitrary method taking a list). This is the same
+problem as the `Contains` method.
 
 While we can't implement `IEquatable<IFixedList<T>>`, we still have the `bool Equals(object?)`
 method. Perhaps we can just properly implement that? Here we run into a second problem. The typical

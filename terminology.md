@@ -1,5 +1,8 @@
 # Terminology
 
+This section documents both what terminology to use in the language reference and compiler code, and
+why it was chosen or avoided.
+
 ## Avoid
 
 The following terms are to be avoided. Typical reasons include ambiguity, multiple uses and

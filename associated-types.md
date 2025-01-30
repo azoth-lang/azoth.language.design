@@ -12,4 +12,9 @@ reflection in Draco's `SyntaxList<T>`.
 When designing the units of measure library, there were several times where we had to work around
 the lack of associated types.
 
+Examples:
+
+* Given a fractional unit like `FractionalPixels` what is the result of calling `RoundUp` etc. (e.g.
+  in the case of `FractionalPixels` it is `Pixels`).
+
 **TODO:** figure out exactly what the issue was and document it here.

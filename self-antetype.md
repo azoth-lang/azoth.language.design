@@ -1148,7 +1148,8 @@ Or
 While it is somewhat reasonable to imagine checking any to `Equatable`s for equality, it is not the
 case that any two `Comparable`s can be compared. Instead, `Comparable` must establish a domain
 within which items can be compared to each other. I am surprised that the Scala `Ordered` trait
-doesn't talk about using `canEqual` or something similar to check whether to values can be compared. The only reasonable way to implement `Comparable` is with a bounded associated type.
+doesn't talk about using `canEqual` or something similar to check whether to values can be compared.
+The only reasonable way to implement `Comparable` is with a bounded associated type.
 
 ```azoth
 public trait Comparable <: Equatable

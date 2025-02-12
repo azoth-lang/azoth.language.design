@@ -25,9 +25,10 @@ on a set, then there is an issue with the equivalence relation used by the set.
 
 Consider an inherently immutable list. Such a list ought to be `out T` (e.g. `IFixedList<out T>`).
 Indeed, doing so has been very helpful within the Azoth compiler. It also makes sense that if `T` is
-equatable then it should be possible to compare to such lists of `T` for equality. Unfortunately, C#
-does not support such conditional implementation of an interface. However, since it has "universal
-equality" we can just assume values can be compared for equality and get some flavor of equality.
+equatable then it should be possible to compare two such lists of `T` for equality. Unfortunately,
+C# does not support such conditional implementation of an interface. However, since it has
+"universal equality" we can just assume values can be compared for equality and get some flavor of
+equality.
 
 So, we would like to implement `IEquatable<IFixedList<T>>`. The first problem we run into is that
 this is not allowed because of variance. This makes sense since it effectively adds a method `bool

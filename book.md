@@ -17,6 +17,7 @@
   * [Memory Allocation](memory-allocation.md)
   * [Patterns](patterns.md)
   * [Type Variables](type-variables.md)
+  * [Dictionary Keys](dictionary-keys.md)
 * [Design Sources](design-sources.md)
 * Design Notes
   * [Self Antetype Design Notes](self-antetype.md)

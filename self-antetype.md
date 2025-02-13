@@ -1127,7 +1127,7 @@ public trait Equatable
 }
 ```
 
-Note that here `Domain` is invariant because even though it is used in output position, it doesn't
+Note that here `Domain` is invariant because even though it is used in input position, it doesn't
 really make sense to expand the domain of that can be checked for equality.
 
 We'll see in the next section that the latter approach is more consistent with comparison.
@@ -1145,7 +1145,7 @@ Or
 
 ### Comparable
 
-While it is somewhat reasonable to imagine checking any to `Equatable`s for equality, it is not the
+While it is somewhat reasonable to imagine checking any two `Equatable`s for equality, it is not the
 case that any two `Comparable`s can be compared. Instead, `Comparable` must establish a domain
 within which items can be compared to each other. I am surprised that the Scala `Ordered` trait
 doesn't talk about using `canEqual` or something similar to check whether to values can be compared.

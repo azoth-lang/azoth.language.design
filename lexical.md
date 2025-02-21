@@ -35,3 +35,12 @@ use of code expressions and blocks in documentation comments should be rare but 
 given the rules of markdown. Additionally, a fenced code block in documentation comments could be
 directly marked as being DSL code rather than Azoth code thereby avoiding the need for nesting of
 code.
+
+## Unicode Symbols
+
+For a long time in the design of Azoth the idea was to have both ASCII operators and their Unicode
+counterparts and treat them as interchangeable. For example, `≤` would be equivalent to `<=`.
+However, this was an additional source of complexity, variation in code, and topic for code
+convention arguments. Thus there really should be only one operator set. Since the Unicode
+characters are difficult to type and would probably require special editor support in many cases
+(e.g., one types `<=` and the editor transforms it to `≤`), that set has to be the ASCII set.

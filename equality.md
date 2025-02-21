@@ -210,4 +210,4 @@ The all operators set has the downside that it uses prefix ! to mean "not" which
 with the fact that suffix ! always means "may abort" and that the not operator is not x. The some
 methods set has the downside that if it is a method strict equality over optional types doesn't work
 well (stand-alone function would be fine) and it is more verbose. However, I like that it makes the
-language simplier and really pushes toward one kind of equality that one normally uses.
+language simpler and really pushes toward one kind of equality that one normally uses.

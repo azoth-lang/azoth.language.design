@@ -142,10 +142,10 @@ inheritance.
 When the `const` and `move` modifiers were designed for classes and traits, they were carried onto
 structs with little thought. It just seemed to be obvious that they would be consistent on structs.
 However, at the time structs had a more clear distinction between `move` and `copy` structs. This
-was because move semantics originally existed only for structs and not to any classes. This meant
-that move worked differently than it does now. It was a special check as in Rust for a use of a
-moved value. It was only later that reference capabilities were applied to structs and it became
-clear that a moved struct was just an `id` struct. Also, copy structs sometimes require special copy
+was because move semantics originally existed only for structs and not to classes. This meant that
+move worked differently than it does now. It was a special check as in Rust for a use of a moved
+value. It was only later that reference capabilities were applied to structs and it became clear
+that a moved struct was just an `id` struct. Also, copy structs sometimes require special copy
 constructors. Finally, non-`move` classes don't seem to be either `move` or `copy` (though really
 the reference itself is copied). So the decision was made to require the `copy` keyword on structs
 to distinguish them from `move` types and from classes.

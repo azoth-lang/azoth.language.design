@@ -2,7 +2,7 @@
 
 ## Syntax
 
-While C/C++ have well established pointer syntax and Azoth is in that linage, it uses pointers much
+While C/C++ have well established pointer syntax and Azoth is in that lineage, it uses pointers much
 more rarely. Given that, it made sense to change the pointer syntax for purposes of clarity and
 freeing up symbols. In terms of clarity, being able to combine the dereference operator in a postfix
 position with the member access operator seemed useful. In terms of freeing up symbols, the unary
@@ -41,7 +41,7 @@ optional types.
 
 At first it was assumed it would be reasonable to have pointers to reference types. Eventually it
 was realized there was serious issues with this. As a result, only pointers to struct types are
-allowed. This follows the precedent set by the C# language. On C#, pointer may only be made to
+allowed. This follows the precedent set by the C# language. In C#, pointer may only be made to
 "unmanaged types". That is, primitive types and structs with unmanaged type. Problems that would be
 caused by allowing pointers to reference types include:
 
@@ -86,3 +86,32 @@ doesn't make sense to introduce an `@any` type with unique syntax just for this.
 type wouldn't be a base type for value types. Given that, it made the most sense to fall back on the
 traditional convention of using actual void pointers i.e. `@void`. This actually makes somewhat more
 sense in Azoth since the `void` type is a true type that acts somewhat like a unit type.
+
+## Capabilities for Pointers
+
+There is a question of how reference capabilities should interact with pointers. Unmanaged struct
+will have their members annotated with reference capabilities. So when calling methods on one from a
+pointer, this must be handled somehow. One option would be to simply allow all reference
+capabilities on pointers. However, it really isn't clear how to apply things like isolation, moving,
+and freezing to them.
+
+Rust has two types of pointers. Mutable pointers types are `*mut T` and "immutable" pointer types
+are `*const T`. However, their "immutable" pointer doesn't truly mean that the data it references
+cannot be changed. It is more properly a readonly pointer. Apparently, at one point it was just
+written `*T`. However, they were making mistakes when transcribing types from C. So they decided to
+make read-only pointer syntax `*const T` which closely matches the C/C++ syntax. Of course, Rust
+doesn't really have the full set of capabilities that Azoth has. Pony doesn't provide direct pointer
+types but has a library type `Pointer[U8] tag`. Notice that they use `tag` which is the equivalent
+of `id`. So they have totally ignored capabilities for pointers. Using `tag` allows them to even be
+passed between threads so that they are just values like integers etc. Void pointers are represented
+with `Pointer[None] tag`.
+
+The distinction between pointers to mutable and read-only data does seem valuable. especially since
+it exists in C/C++. Trying to deal with isolation seems like it would be complex and lead to issues.
+That also rules out moving and freezing (note that freezing it recovering partial isolation). There
+is some reason to have pointers to truly constant data since there are times when a pointer can
+point to data that the virtual memory manager protects as constant (or ROM etc.). But having that
+extra complexity when it would still be entirely manual (i.e. one would just be manually casting to
+`@const T`) hardly seems worth it. For now, it makes sense to keep it simple with pointers to
+mutable (`@mut T`) and read-only (`@T`). Since these are low-level and unsafe, they imply no
+restrictions on passing them between threads etc.

@@ -115,3 +115,13 @@ extra complexity when it would still be entirely manual (i.e. one would just be 
 `@const T`) hardly seems worth it. For now, it makes sense to keep it simple with pointers to
 mutable (`@mut T`) and read-only (`@T`). Since these are low-level and unsafe, they imply no
 restrictions on passing them between threads etc.
+
+A further issue arises in Azoth because of the distinction between `var` and `mut`. Consider a
+pointer to a mutable `int32`. In Azoth, `int32` is a `const` type and really it is the `var`
+declaration that allows it to be mutated. So it is not proper to say one has a reference to a
+mutable `int32`. It would seem the pointer type should be `@var int32`. However, there can be
+mutable structs and they can even be stored in `let` bindings. It would seem as if both `var` and
+`mut` need to be allowed on pointers. However, that seems excessively complex and not in keeping
+with how pointers work in C/C++. I think that using `var` fits the expected/common case and also
+helps to make it clear that this is not a reference capability and explain why other capabilities
+cannot be used with it. However, `@var T` where `T` is not `const` should be treated as `mut T`.

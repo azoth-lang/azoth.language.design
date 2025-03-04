@@ -46,7 +46,7 @@ I believe part of the confusion is that Rust and Swift allow something that they
 allow a generic type parameter to be assigned to an associated type of a trait. Consider the Rust
 [`Map<I, F>` struct](https://doc.rust-lang.org/std/iter/struct.Map.html) which is returned by the
 `map` method on iterators. It is generic on the value it iterators over and yields. But it
-implements `Iterator` by setting the associated type to ta type determined by the generic parameter
+implements `Iterator` by setting the associated type to the type determined by the generic parameter
 `F`. This is a crossing over from an "instance" type to a "static" type.
 
 ```Rust

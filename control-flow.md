@@ -82,5 +82,5 @@ loop should be exited and the outer loop should continue where the inner loop st
 semantics of `break`). Whereas `next outerLoop;` very clearly reads that it will execute the next
 iteration of the outer loop.
 
-Since Azoth follows the C family of languages in so many other regards. The `continue` will be
+Since Azoth follows the C family of languages in so many other regards, `continue` will be
 recognized as a contextual keyword synonym for `next` that generates a non-fatal error.

@@ -18,6 +18,7 @@
   * [Patterns](patterns.md)
   * [Type Variables](type-variables.md)
   * [Dictionary Keys](dictionary-keys.md)
+  * [Tests](tests.md)
 * [Design Sources](design-sources.md)
 * Design Notes
   * [Self Antetype Design Notes](self-antetype.md)

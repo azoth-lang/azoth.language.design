@@ -3,6 +3,7 @@
 * [Introduction](introduction.md)
 * [Principles](principles.md)
 * [Terminology](terminology.md)
+* [Potential Issues](potential-issues.md)
 * [Design Decisions](design-decisions.md)
   * [Lexical Structure](lexical.md)
   * [Classes and Structs](classes-and-structs.md)

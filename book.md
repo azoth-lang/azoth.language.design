@@ -7,6 +7,7 @@
 * [Design Decisions](design-decisions.md)
   * [Lexical Structure](lexical.md)
   * [Classes and Structs](classes-and-structs.md)
+  * [Hybrid Types](hybrid-types.md)
   * [Namespaces](namespaces.md)
   * [Control Flow](control-flow.md)
   * [Naming and Conventions](naming-and-conventions.md)

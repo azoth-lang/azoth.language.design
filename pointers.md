@@ -95,7 +95,7 @@ pointer, this must be handled somehow. One option would be to simply allow all r
 capabilities on pointers. However, it really isn't clear how to apply things like isolation, moving,
 and freezing to them.
 
-Rust has two types of pointers. Mutable pointers types are `*mut T` and "immutable" pointer types
+Rust has two types of pointers. Mutable pointer types are `*mut T` and "immutable" pointer types
 are `*const T`. However, their "immutable" pointer doesn't truly mean that the data it references
 cannot be changed. It is more properly a readonly pointer. Apparently, at one point it was just
 written `*T`. However, they were making mistakes when transcribing types from C. So they decided to

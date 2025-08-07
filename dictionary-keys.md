@@ -13,10 +13,10 @@ There are three ways that could be true:
 
 1. The key is constant (i.e. `const T`)
 2. The key is an object id (i.e. `id T`)
-3. The can be mutable but the comparison is still stable because either:
+3. The key can be mutable but the comparison is still stable because either:
    * The comparison happens by `id`.
-   * The comparison happens considers only portions of the key that are immutable (whether they are
-     marked `const` or not).
+   * The comparison considers only portions of the key that are immutable (whether they are marked
+     `const` or not).
 
 The question then becomes how should this be reflected in the API of the dictionary? There seem to
 be five possible options.

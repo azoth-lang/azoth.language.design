@@ -91,6 +91,10 @@ assigned a unique slot and there is only one vtable pointer in an object. If thi
 not in place, it would then be ambiguous which method pointer to put in the `M` vtable slot for
 class `D`.
 
+**TODO:** but generic interfaces can mean that you implement an interface twice with different
+parameters and a method becomes overloaded on the generic parameter type. So there is already not a
+unique slot for each method.
+
 ## Private
 
 Private members are private to the instance not shared between instances of the class. This
@@ -142,7 +146,7 @@ inheritance.
 When the `const` and `move` modifiers were designed for classes and traits, they were carried onto
 structs with little thought. It just seemed to be obvious that they would be consistent on structs.
 However, at the time structs had a more clear distinction between `move` and `copy` structs. This
-was because move semantics originally existed only for structs and not to classes. This meant that
+was because move semantics originally existed only for structs and not for classes. This meant that
 move worked differently than it does now. It was a special check as in Rust for a use of a moved
 value. It was only later that reference capabilities were applied to structs and it became clear
 that a moved struct was just an `id` struct. Also, copy structs sometimes require special copy
@@ -160,3 +164,38 @@ While thinking about the design of enums/discriminated unions it was realized th
 long declarations for simple things. For example, all enum like types would be `const copy struct`.
 It was thus decided to change structs so that `const copy` is the default. To declare a non-copy
 struct, use the `move` keyword. To declare a non-const struct, use the `mut` keyword.
+
+## Class Inheritance
+
+Azoth is a complex language and I have been seeking ways to simplify it. It was recently suggested
+that it could be simplified by eliminating the ability to inherit one class from another. Since
+traits can have method implementations and property declarations and since you can implement the
+interface of a class, eliminating class inheritance wouldn't impose as many limitations as it would
+in a language like C#.
+
+Removing class inheritance would indeed simplify the language. How initializers call base
+initializers and the order of operations is very complex. It would also eliminate abstract methods
+and abstract classes. It would make classes and value types symmetric with neither supporting
+inheritance.
+
+One downside is that it would necessitate a change to how discriminated union value types are
+handled. Currently, they `closed` modifier can be applied to `struct`s and they they use the
+syntax/machinery of inheritance to define the case types. If class inheritance is removed, that
+functionality will be gone. There will still be `closed` traits and a class could be marked `closed`
+to limit types implementing the trait. But another syntax would be needed. It would probably end up
+being something like an `enum` modifier on value types along with much more restricted case
+declarations. The `enum` modifier could be supported on classes too. However, the functionality is
+less valuable on classes and adds complexity to the language, so it probably wouldn't be done. That
+would also eliminate a good shorthand syntax for cases of a closed class.
+
+Despite the downsides, removing class inheritance was very seriously considered. The language is
+complex and needs simplified as long as the cost isn't too high. However, removing it would
+eliminate important use cases with state hidden in a base class. Without it, you'd need to use
+composition to pick up what would otherwise have been inherited. This would necessitate a lot of
+boilerplate in the "subclasses". They could at least use a value type for the base class to avoid
+indirection. As an example, consider the `SemanticNode` class in the compiler that is the base class
+for all AST nodes. It contains a private parent reference which is manages through restricted
+`SetParent()`, `GetParent()`, and `PeekParent()` methods. That would not be possible without class
+inheritance. Given that Azoth is meant to empower developers and not feel restrictive, the loss of
+the ability to directly do that would be painful. Keeping class inheritance also means the elegant
+and flexible `closed` value types mechanism can be kept.

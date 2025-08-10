@@ -84,3 +84,31 @@ iteration of the outer loop.
 
 Since Azoth follows the C family of languages in so many other regards, `continue` will be
 recognized as a contextual keyword synonym for `next` that generates a non-fatal error.
+
+## Loop Label Syntax
+
+Since the beginning I have wanted to support Java style loop labels with break and next referring to
+labels. I have always thought that was the only proper use case of the C# goto. Likewise since
+jumping between switch/match cases is not supported there is no need for the C# style goto keyword.
+However, it has been a real challenge to find a good syntax for both declaring and using loop
+labels. In Adamant, there were named scopes and it was thought that loop labels should be
+syntactically similar to named scopes. However, Azoth doesn't have anything like that. In Azoth, all
+loops can be expressions. That makes it more challenging because the syntax has to be unambiguous
+even when it is part of an expression. Looking at other languages, a label followed by a colon is
+the almost universal syntax for loop labels. Only Kotlin breaks with that and uses the at sign (e.g.
+`label@ for ...`). I resisted using the colon because in Azoth it is so tightly associated with
+typing and subtyping. That is part of why the named parameter syntax doesn't use colons. At one
+point, I thought that treating labels like pointers and using a syntax involving the at sign made
+sense. However, this wasn't quite right. If the label was the target of a goto that it could be
+reasonably treated as the address of an instruction. However, the break statement breaks out of the
+loop. It using the loop label as a way of referring to the loop not as an address for the loop.
+
+I've designed to accept the label colon syntax for loop labels because it is so universal and there
+aren't any better options. Even if type ascription expressions are added to Azoth using the colon,
+this syntax won't be ambiguous because a loop keyword following the colon could never be the start
+of a type name. There was also some concern about the syntax for break with loop label to ensure
+there was no ambiguity between the loop label and the value expression. However, the use of loop
+labels will be very limited and there will only be a few labels in scope at any given time. I think
+it is safe to treat something as a label if it matches a loop label. If that was not the intended
+meaning and it shadows a local variable, the developer should get a compiler error since the loop
+will not have the correct type.

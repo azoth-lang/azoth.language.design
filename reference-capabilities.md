@@ -101,10 +101,12 @@ public class Box[T ind] <: Read_Box[T] // ERROR independence not maintained
 }
 
 // In a method
-let b: mut Box[mut Square] = new Box[mut Square](new Square());
+let b: mut Box[mut Square] = Box[mut Square](Square());
 let rb: Read_Box[mut Shape] = b;
 
 let f: const Box[const Square] = freeze b;
+
+rb.value.scale(2); // could mutate the square in f.value that ought to be const
 ```
 
 If `Box` were not declared with an independent type parameter, then the implementation of

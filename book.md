@@ -21,6 +21,7 @@
   * [Type Variables](type-variables.md)
   * [Dictionary Keys](dictionary-keys.md)
   * [Tests](tests.md)
+  * [Independent Generics](independent-generics.md)
 * [Design Sources](design-sources.md)
 * Design Notes
   * [Self Antetype Design Notes](self-antetype.md)

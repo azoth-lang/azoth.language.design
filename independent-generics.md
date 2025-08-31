@@ -25,10 +25,23 @@ Contents:
   * [Reified Ownership](#reified-ownership)
 * [Questions](#questions)
   * [Can Independent Parameter Capabilities be Constrained?](#can-independent-parameter-capabilities-be-constrained)
-  * [Do Independent Parameters Default to or Always Allow Move Types?](#do-independent-parameters-default-to-or-always-allow-move-types)
+  * [Do Independent Parameters Default-to or Always-Allow Move Types?](#do-independent-parameters-default-to-or-always-allow-move-types)
 * [Ideas](#ideas)
+  * [Thoughts](#thoughts)
+  * [Reified Ownership Produces Cases](#reified-ownership-produces-cases)
+  * [More thoughts](#more-thoughts)
 * [Options](#options)
 * [Decision](#decision)
+  * [Meaning of `iso`](#meaning-of-iso)
+  * [Ownership of Structs](#ownership-of-structs)
+  * [Resource Types](#resource-types)
+  * [Ownership is Distinct from Isolation](#ownership-is-distinct-from-isolation)
+  * [Owned as an Additional Capability](#owned-as-an-additional-capability)
+  * [Independent Parameters with Owned](#independent-parameters-with-owned)
+    * [Evaluating this model](#evaluating-this-model)
+  * [Issue: Struct Ownership when Freezing](#issue-struct-ownership-when-freezing)
+  * [Result of Moving a Struct](#result-of-moving-a-struct)
+  * [`temp iso` Doesn't Have Ownership](#temp-iso-doesnt-have-ownership)
 
 ## Defining Independent Parameters
 
@@ -509,7 +522,7 @@ with the fact that independent parameters remove the reification of capabilities
 the reification of ownership. Thus before the generic parameter either a capability constraint set
 could be declared or independence could be declared.
 
-### Do Independent Parameters Default to or Always Allow Move Types?
+### Do Independent Parameters Default-to or Always-Allow Move Types?
 
 With regular generic parameters, they default to not allowing move types and to the `aliasable`
 capability set. This is because the `iso` capability and `move` types impose so many restrictions on
@@ -528,6 +541,235 @@ constrained. This question asks how move types should be handled. Options:
 
 **TODO:** write up ideas that might be used in a solution
 
+### Thoughts
+
+* Imagine specifying it like the capability of self (e.g. `mut self[aliasable]`)
+  * Do you then use self viewpoint `self |> T` to describe the type? It seems like that shouldn't be
+  needed since generic parameters normally contain the capability.
+  * But if you say that it doesn't contain the capability, then what is the capability of a field of
+  `T`? Does one have to constantly write `self |> iso T` to just get the current capability of `T`?
+  * How does this help work with varying types based on whether they are move or not?
+* Maybe you describe it as if you had to move them and that is weakened for non-move types. For
+  example, maybe you use `own T` when you want to talk about a place you use `T` that should have
+  ownership if it is a move type. You have to use `move` on these things. But `T` refers to `T` with
+  the current capability.
+* Alternatively, `T` refers to an owned `T` so that a field is just `T` and you have to use
+  something like `self |> T` to have a T that is restricted. What's good about that is it makes
+  sense of the fact that you don't have `self |> T` for fields.
+* However it works, you need to think about how it fits with having a field that is another
+  collection. You need to pass along the type.
+* Even if an independent parameter didn't allow move types, how does it deal with `iso`? What
+  capabilities do fields then have?
+* You can't just say use `iso T` as the owned type because how does one get an alias to a value?
+* Consider list clear, the signature must somehow convey that if the list has ownership, then
+  isolation of the elements needs to be recovered to call it, but if the list doesn't have ownership
+  then it can be called on any mutable list. The self parameter is somehow like `mut self[own
+  implies iso T]`. Basically the constraint needs to either be `iso` or `any`.
+* If owned/unowned has been reified into `T` then perhaps what is needed is to use a viewpoint of
+  it. So maybe `T |> iso` produces wither `iso` or `any` depending on whether it was reified with
+  owned or unowned? But how do you express `T` with either `iso` or current? * Is `mut |> iso` still
+  iso since the field has isolation even through a mutable reference?
+
+### Reified Ownership Produces Cases
+
+If we think that owned/unowned must be reified. Then the container/collection operations produce
+various cases. Consider a collection with generic parameter `T` reified with `owned X` or `unowned
+X` and current capability `c`. Then the cases are:
+
+* add item parameter, take item return type (tied to self parameter), replace item parameter, field
+  type
+  * owned: `iso X`
+  * unowned: `c X`
+* take item self parameter, discard item self parameter, replace item self parameter, clear self
+  parameter
+  * owned: `mut self[iso]`
+  * unowned: `mut self[any]`
+* alias an item return type
+  * owned/unowned: `c X`
+
+Those are the cases for the type syntax. You still need syntax for:
+
+* recovering isolation of independent parameter
+* freezing independent parameter
+* destructor for collection
+
+### More thoughts
+
+* The capability/sharing system acts as if there is a reference to the items carried along with the
+  reference to the collection. What if we give that reference a name and treat it like an additional
+  parameter. It seems to give a good way to constrain that, but mostly constraining it isn't what is
+  needed. It also doesn't give an obvious syntax for the type cases needed for collections
+  * `class List[independent t: T]` names the additional reference `t`
+  * `public fn at(self, any t) -> t |> T` OR `public fn at(self[any t]) -> t |> T`
+  * This gives a syntax for freeze of `freeze list.t`. One would need a recover keyword to do
+    `recover list.t`
+* What if we give a variable for the capability of an independent parameter?
+  * `class List[independent c T]` names the current capability `c`, `T` doesn't have a capability
+  * `public fn at(self) -> c T` works, but how do you get the `iso` or `c` and `iso` or `any`
+    needed?
+  * Is a field `let v: c T`? That d
+* Any combining of `self |> T` feels wrong because the capability of `self` doesn't affect `T`
+* What is needed is a capability set that is either `any` or `iso` depending on whether the type has
+  ownership. Call that `x` for now. Let `T` represent the type with the current capability. Then
+  according to regular capability constraint rules `x T` is either `iso X` or `c X` as needed for
+  the first case and `mut self[x]` is either `mut self[iso]` or `mut self[any]` as needed for the
+  second case and `T` is `c X` as needed for the third case. (No! that isn't quite right because if
+  `c` is not `iso` it can't be constrained to `iso`.)
+  * That being wrong is also why you can't do `iso T` with a regular generic parameter. **You can
+    only constrain a generic parameter to a capability set that contains `id`. That ensures there is
+    always a compatible capability.**
+* While the last idea isn't quite right, a keyword that behaves that way is basically what is
+  needed.
+* Recovering isolation on list elements isn't quite a move but is similar in that it should really
+  only happen as part of passing or returning the list. In some ways it is like a move because
+  isolation is available in that scope. But when the function returns you still have a way to access
+  the list elements. If they were moved, then you shouldn't be allowed to. Maybe `move` passes
+  ownership via an isolated reference while `recover` just recovers isolation without passing
+  ownership? It still isn't clear how one makes clear which aspect of a list you are passing. Given
+  a list `l`, how do you express each of:
+  * move the list, share the elements
+  * share the list, share the elements
+  * share the list, move the elements
+  * share the list, recover isolation of the elements
+* If you have a list and pass ownership of the items to the list, when the method returns, do you
+  now have an empty list that you can start adding items to? Perhaps moving ownership leaves behind
+  a `never` type so the list becomes `List[never]` and you can no longer access the elements or add
+  them, but out could still check the `count`.
+* Maybe `own` is a separate stronger capability than `iso`. (This seems to make sense and calls back
+  to ideas from Adamant when the capabilities controlled memory. That makes sense since here the
+  capability controls the resource lifetime.)
+  * In this design a `List[iso Shape]` doesn't have ownership. Instead a `List[own Shape]` does.
+  * But aren't `own` and `iso` mutually exclusive? I think they have to be. If you've truly lost any
+    other references to a move type, then the one remaining `iso` reference must have ownership. So
+    you can't have an `iso` reference to a move type. That argues that there is not a distinct
+    capability. Instead `iso` behaves slightly differently for move types (as original thought). It
+    must just be that independent parameters interact with `iso` in interesting ways.
+* Maybe what is needed is a different keyword than `independent`. One that names it as a collection
+  element. Then the missing `x` keyword could follow the naming scheme of collection elements.
+  * `member`
+  * `contained`
+  * `boxed` - confusing with C# boxing
+* What if we use `ind` as that missing keyword
+  * `class List[ind T readonly out]`
+  * `let items: mut Bounded_List[ind T]`
+  * `fn push(mut self, value: ind T)`
+  * `fn pop(mut self[ind]) -> ind T` the use with `self` seems wrong
+  * `fn at(self) -> T`
+* Maybe we can outlaw having fields be `iso` or `temp iso`. No, that conflicts with the fact that
+  a move type can have ownership through fields of other move types.
+* What if ownership was a sort of property that is independent of other things? You could have an
+  `own mut X` reference. Then you could restrict `iso` to not be on fields and have a tag that tells
+  you something has ownership and will need to call the destructor. An `iso X` reference would
+  implicitly have ownership for move types since this is the only reference. Transferring ownership
+  would require recovering isolation because one couldn't guarantee that the new owner wouldn't
+  destruct it while you still had a reference. But it still isn't really clear that this adds value
+  over just having `iso` imply ownership on move types. I guess it makes the reified property of
+  ownership explicit.
+* PROBLEM:
+  * If all structs are `move`, then you can't use a struct field in a class unless that class is
+    `move`. That is a problem for performance optimizations that want to avoid a layer of
+    indirection by using a struct. Maybe we need structs that aren't `move` but still all struct
+    types would enforce that there is an owning binding and other references don't outlive it.
+    * maybe `move` types are renamed `resource` types and structs don't have to be them but structs
+      still enforce the recovery of isolation without destruction to avoid references outliving the
+      value.
+    * Thus non-resource structs could be kept as `iso` fields in classes.
+    * Would you then have "struct traits" that acted like structs even though they were traits?
+* What if we use `own` as that missing keyword. That fits with the fact that it is related to
+  ownership and might have to be moved.
+  * `class List[ind T readonly out]`
+  * `let items: mut Bounded_List[own T]`
+  * `fn push(mut self, value: own T)`
+  * `fn pop(mut self[own]) -> own T` the use with `self` seems wrong
+  * `fn at(self) -> T`
+* It seems like a modification on `iso` would be better. Something that means possibly isolated or
+  isolated if owned.
+  * `iso?`
+  * `iso/T` and `iso/any`
+  * `iso/? T` and `iso/any`
+  * `iso|? T` and `iso|any`
+  * `iso|cur T` and `iso|any` but then do you have to use `cur T` for the other case?
+  * `iso|* T` and `iso|any` and `* T`
+* Should an independent parameter `T` be modeled more like an associated type that doesn't have a
+  capability? It could then have two special capabilities. One that means `iso` if owned and another
+  that means current capability. But would that let you say `mut T` since it take a capability? This
+  is very different than how it is handled today where it is modeled as having a capability that is
+  unknown.
+* It really is like a second reference to the elements is being passed in. The elements are being
+  accessed through that reference.
+  * What if the basic capability is written `* T` meaning unknown or wildcard (or maybe `_ T`)
+  * `fn at(self[any]) -> t |> * T` or `t |> _ T`
+  * A syntax for `iso|any` is still needed (just use the underscore again?)
+  * The full set with underscore is then:
+    * `class List[independent t: T readonly out]`
+    * `let items: mut Bounded_List[_ T]`
+    * `fn push(mut self, value: _ T)`
+    * `fn pop(mut self[_]) -> _ T` the use with `self` seems wrong
+    * `fn at(self[any]) -> t |> _ T` possibly any could be the default so that it could be ignored
+    * However, the `_` is almost totally redundant. If it were the default, then one would only need
+      a new syntax for `mut self[_]`.
+* It may not make sense to pass ownership of the items of a list without passing ownership of the
+  list itself. What is good about that is that you still need to `move` the whole list. But there is
+  still the question of how to pass an isolated list without isolated elements.
+  * If you pass a list with isolated elements, the elements may not be isolated afterward and you
+    need to recover isolation again.
+* How does a class declare that it owns a struct, but then allow many references to that struct? If
+  the field is `iso S` then won't the rules require that isolation of the field be recovered at the
+  end of each method? This may be a killer argument for ownership being partially independent of
+  `iso`. When passing ownership you need `iso`, but once a field or local can have ownership without
+  being isolated. Maybe owned is a weaker capability that isolated. So isolated implied owned but
+  not vice versa? `iso <: own <: mut`. Note that `own` is not a subtype of `const` because having
+  ownership doesn't mean there aren't mutable references to it.
+  * `own` would be a capability that only applied to `struct` or things that could be `struct`
+  * This would enable the rule that `iso` and `temp iso` can't be used for fields.
+  * `temp const` may be like `iso` in that it can never be directly used, it is always cast up
+    before being accessed.
+  * It seems like you could just use `own` everywhere and `iso` would be a sort of ephemeral type.
+    But then you could just rename that to `iso`.
+  * What if `iso` isn't a reference capability at all? Joe Duffy admits it is different. **What if
+    it had a distinct syntax saying that you needed isolation to assign into a variable or field but
+    was never a part of the type?** Then `own <: mut` that exists only for structs but requires
+    taking isolation to assign into it. Or maybe `iso` is a reference capability, but it is
+    ephemeral. It can be used on return types and it is the result of `move` expressions but cannot
+    be the type of a field or variable because accessing the field or variable would break
+    isolation. For local variables one can simply `move` into them to express that isolation is
+    recovered. However for parameters, one needs a different way to declare that one requires a move
+    expression to pass the argument. Essentially, the parameter type is `iso`, but the variable in
+    the method is not. Put another way, it seems valid for the public signature to have an `iso`
+    parameter, but not for the local variable to.
+    * It seems like `lent iso` may be nonsensical. If you pass an `iso` reference then you no longer
+      have any reference to it. In what sense can you then lend it and not be concerned about
+      whether it is mixed with other things. So maybe, parameters can be either `lent` or `move`. A
+      `move` parameter means that it actually expects `iso`. The question is how does that interact
+      with generic independent parameters? Can they be `iso`? Perhaps they can't anymore since `iso`
+      is an ephemeral capability. When considering the method type, `move` would disappear and the
+      parameter would become `iso`.
+    * Would regular generic parameters limit themselves to non-ephemeral types? There are many cases
+      where a generic parameter might be used as a parameter or return type, but if you wanted to
+      store the type in a field then you couldn't allow `iso` or would need a constrained version of
+      it. Generics might be a reason to not use `move` parameters since how does one say they take a
+      generic parameter that is `iso`? Maybe instead one just allows `iso` in parameter and return
+      types but not variables and fields?
+* Isolation of list elements is strange. It is sort of like `temp iso` because a reference to the
+  main list can create new references to the items. But it is stronger than `temp iso` because
+  sequestered aliases can't be allowed since they would break if an item were removed from the list.
+  * This seems to argue against a mental model where there is just an extra reference to the items.
+    Instead, it really is that they are managed by the list, but more flexibility is allowed.
+  * Returning to Joe Duffy's writeup of Midori, I notice that he describes list as an example of an
+    object with "layers". He says that they made it complex for a while but then collapsed it back
+    to the simple core. It makes it sound like there is a basic version of it that works without
+    being too complex.
+* Clarify what `temp iso` means. It doesn't just mean that as long as the reference exists there are
+  no other references except sequestered references. Aliases can be created from the `temp iso` and
+  as long as they exist, the other references must be sequestered. Like `iso` it is a sort of
+  ephemeral property, but part of that property continues to exist. Also, `temp iso` doesn't have
+  ownership.
+* It should be possible to prevent the freezing of structs even if there are trait aliases because
+  there will always be one variable in the sharing set that has ownership of the struct and that
+  will have the struct type. So that binding in the sharing set can prevent freezing. But it is odd
+  that you can't have const structs.
+  * Alternatively, `const` references to structs could participate in sharing.
+
 ## Options
 
 **TODO:** write up possible options to solve the problem.
@@ -535,3 +777,162 @@ constrained. This question asks how move types should be handled. Options:
 ## Decision
 
 **TODO:** make a decision which option to go with.
+
+### Meaning of `iso`
+
+`iso` is a sort of almost ephemeral capability. A variable binding or field marked `iso` does not
+maintain isolation. The `iso` capability instead acts as `mut` or some other capability. Putting
+`iso` on a type causes three things:
+
+1. Isolation must be recovered to assign into that value. (What about reassigning to `var`?)
+2. That binding owns the the value. This only matters if it is a struct in which case this binding
+   stores the value inline until it is moved out.
+3. After assignment, isolation is not maintained.
+
+The last point implies that an `iso` field in a class does not have to maintain isolation. That is
+counter intuitive enough that it may make sense to change the keyword to something like `own` which
+is a statement about the binding not about the ephemeral property.
+
+### Ownership of Structs
+
+An owned struct will recover isolation when it goes out of scope to ensure that there are not
+references to the struct. For fields, their lifetime is managed by the garbage collector, so they
+never actually go out of scope. Thus a field does not trigger recovery of isolation.
+
+Questions:
+
+1. Can you freeze a non-resource struct? It seems like you should be able to, but then `const`
+   references to the struct would not be tracked and could outlive the struct.
+2. What about the problem of `id` references to a struct being tracked?
+3. Can up upcast struct references to trait references? If so how are rules about `const` and `id`
+   enforced? Does the language need `struct trait`s that can be upcast to and enforce those rules?
+
+### Resource Types
+
+The previous concept of move types is replaced with resource types. There can be resource classes,
+structs, and traits. Not all structs are resource structs. The resource attribute is inherited and
+must be repeated on the subtype. Resource types can have destructors. A resource type forces the
+recovery of isolation when the owner goes out of scope and then calls the destructor. This needs to
+happen even for fields. To support that, a resource type must either be on the stack or a field in
+another resource type. When the containing resource type is destructed is when the field will
+recover isolation and be destructed.
+
+### Ownership is Distinct from Isolation
+
+Thinking carefully about ownership one realizes that ownership is a property that is distinct from
+and still exists even after isolation is lost. An isolated reference has ownership since it is the
+only reference to the object graph, but once aliases exist, ownership can still be retained. Two
+examples demonstrate this. The examples use `File` and `Output_Stream` as examples of a resource
+classes.
+
+1. Consider a `mut List[iso File]`. As soon as one of the file elements is accessed, this becomes a
+   `mut List[mut File]` since there is now an alias to one of the files. They are no longer
+   isolated. That is consistent with how a variable containing a file would work. But now, consider
+   passing this `mut List[mut File]` to a method. That method could add another file reference to
+   the list but would not know that it needed to pass ownership. It could add an alias to a `File`
+   owned by something else and then the list could destruct the `File` before it ought to be. Thus,
+   we see that the list passed to the method must somehow encode in its type that while the files
+   aren't isolated, they still are owned.
+2. Consider a method or constructor which wraps an `Output_Stream` in a `Text_Writer` that owns the
+   output stream. This needs ownership of the `Output_Stream` but it is fine if other references
+   exist to it. It is just that those other references will have to go away before the `Text_Writer`
+   goes out of scope. That will be ensured since they will be in the same sharing set as it. The
+   method not taking an isolated reference means that it cannot destruct the `Output_Stream` since
+   it couldn't recover isolation on it. But it can wrap and return it.
+
+### Owned as an Additional Capability
+
+Ownership being distinct from isolation implies that it is a separate capability `own` where `iso <:
+own <: mut`. Resource types and structs have the `own` capability. Other types don't have it as a
+distinct capability. It sort of collapses into `mut` for other types.
+
+When an `iso` variable is accessed it must be upcast and its type changes via flow typing. I think
+there may be an issue right now where it will change the variable to `read` if it is first accessed
+as `read`. Instead, it seems that the capability should also be moved along the path toward `mut`.
+For example, consider an `iso` variable that is first aliased by a `read` reference and then aliased
+by a `mut` reference. For the second alias to be taken, the variable must still be `mut`. It is just
+that variable references have flow typing so that if one freezes a reference, the variable can
+change to `const` and does not block freezing the way a `mut` reference in some other sharing set
+would. For structs and resource types, `own` is the next capability up and is what `iso` becomes
+when a variable is aliased. That ensures ownership is retained and tracked. The example of a list of
+files is then handled since a `mut List[iso File]` becomes `mut List[own File]` when accessed. It
+cannot be upcast to `mut List[read File]` because list is `readonly out`. It can only become a list
+of read only files when the list itself is read only (i.e. `read List[read File]`).
+
+### Independent Parameters with Owned
+
+In the model where `own` is its own capability, independent parameters do not reify the capability
+or ownership. Instead, an independent parameter `T` conceptually has the current capability of the
+parameter at all types. This capability is unknown within the class.
+
+Additionally, capability constraints must be applicable even to independent parameters. This is how
+the class can upcast the capability of the independent parameter to fit different situations.
+
+#### Evaluating this model
+
+Let's consider again the `Hybrid_List` from the problem statement. Under this model, nothing about
+the capabilities of the independent parameters are reified. Only the bare type is reified.
+
+```azoth
+published class Hybrid_List[any P ind readonly out, any T ind readonly out] <: // ...
+{
+    // `P` has whatever capability the class was declared with
+    published init(mut self, prefix: P) { ... }
+
+    // `T` has whatever capability the parameter currently has. If `T` is an owned type, this will
+    // be `own T`.
+    published fn add_range(mut self, items: Iterator[T]) { ... }
+
+    // Returns an alias of the current capability by upcasting with `aliasable T`
+    published fn iterate(temp const self) -> mut Iterator[aliasable T] { ... }
+
+    // Returns an alias of the current capability by upcasting with `aliasable T`
+    published fn at(self, index: size) -> aliasable T { ... }
+
+    // The destructor declaration needs some way to convey that it exists only for `own P` and `own T`
+    published delete(lent mut self) { ... }
+}
+```
+
+There is still a question how one recovers isolation on the elements or freezes them.
+
+Now consider the collection methods and the cases that result:
+
+* add item parameter, take item return (safe for `own` because the collection must still be `mut`),
+  replace item parameter, field type
+  * `T` with the current capability
+* discard item self parameter (call `take()` and get ownership and the destructor will be called)
+  * `mut self`
+* alias an item return
+  * `aliasable T`
+* recover isolation of the items
+  * ???
+* freeze the items
+  * ???
+
+For recovery and isolation, it must be doable for the list, prefix, and items separately
+
+### Issue: Struct Ownership when Freezing
+
+Resource types can't be frozen because it doesn't make sense to destruct a constant value. Indeed the destructor
+
+**Decision:** struct types cannot be frozen and as such cannot be `const`. Note this also means that
+you cannot declare a `const struct`.
+
+### Result of Moving a Struct
+
+A binding with ownership has space allocated for the full struct. Thus after the value is moved, a
+reference cannot be left behind. Symmetry with reference and value types might make one think that
+some special `id` with ownership value should be left. The problem with that is that aliases could
+be made to that and then would have to be tracked and when the value went out of scope it would need
+to recover isolation. But it couldn't recover isolation because it is no longer safe to use the
+value at all. Instead, a variable owning a struct must simply be inaccessible after the value is
+moved out. This is like Rust which simply reports a compiler error, "use of moved value."
+
+**Decision:** struct types cannot be `id`. No value is left behind when a struct is moved. The
+variable simply cannot be used.
+
+### `temp iso` Doesn't Have Ownership
+
+It must be the case that `temp iso` doesn't have ownership and thus it isn't a subtype of `own`. So
+does it need a different name?

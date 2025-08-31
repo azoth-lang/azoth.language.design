@@ -42,6 +42,8 @@ Contents:
   * [Issue: Struct Ownership when Freezing](#issue-struct-ownership-when-freezing)
   * [Result of Moving a Struct](#result-of-moving-a-struct)
   * [`temp iso` Doesn't Have Ownership](#temp-iso-doesnt-have-ownership)
+  * [Other Decisions](#other-decisions)
+  * [Remaining Question](#remaining-question)
 
 ## Defining Independent Parameters
 
@@ -936,3 +938,41 @@ variable simply cannot be used.
 
 It must be the case that `temp iso` doesn't have ownership and thus it isn't a subtype of `own`. So
 does it need a different name?
+
+### Other Decisions
+
+**Decision:** all independent parameters allow any capability and allow move types. This simplifies
+the language. Thus the syntax moves before (i.e. `class List[independent T readonly out]`).
+
+### Remaining Question
+
+* How does move/recover and freeze work with independent parameters
+* Should we switch to using `iso`, `own`, and `const` to recover and freeze? If not, how does one
+  express recovering ownership?
+* How does one declare and write destructors for classes with independent parameters?
+* How can a class conditionally have ownership without full independence? For example, a
+  `Text_Writer` may or may not have ownership of the contained `Output_Stream` but it isn't a type
+  parameter at all and it always needs to be able to mutate it. Thus it wants it to be either `own`
+  or `mut`.
+* How do trait methods deal with the fact that `Self` may be a struct or resource type? Does that
+  impose too great of a restriction on what can be done with `self`?
+  * Should a `const trait` assume that `Self` cannot be a struct or resource type or does that still
+    require an explicit constraint on `Self` (e.g. `where Self: class, not resource`).
+* How does one constrain to resource types or not? Options:
+  * Possibly a resource type `where resource T` or `where T: resource?`
+  * Not a resource type: `where T: not resource`
+  * Not a struct type: `where T: not struct`
+  * Definitely a resource type `where T: resource`
+  * A resource or struct: ???
+* What are the proper defaults for type parameters with regard to allowing resource types and
+  structs? Is `aliasable` still the correct default? If it is used, then a type parameter doesn't
+  have to worry about structs and resource types.
+* Constraining to a capability set seems to only work if that set includes `id`. Is that correct?
+* What about `shareable ind`?
+* Does the `readonly` capability include `id`?
+  * Answer: yes because `id List[X]` is still `out` in `X`
+* Is `<constraint> T` (e.g. `aliasable T`) the correct syntax or should some kind of operator apply
+  since it is really an upcast of the capability? Perhaps it should be `T as aliasable`?
+* Since `readable` accepts `iso` and `own`, that means a method on a struct or resource type
+  accepting `readable self` might have to accept ownership and also might have to call the
+  destructor.

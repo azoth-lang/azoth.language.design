@@ -976,3 +976,7 @@ the language. Thus the syntax moves before (i.e. `class List[independent T reado
 * Since `readable` accepts `iso` and `own`, that means a method on a struct or resource type
   accepting `readable self` might have to accept ownership and also might have to call the
   destructor.
+* For a `mut List[own S]`, the items must be isolated in order to resize the list. How is that
+  handled?
+* Can you assign overtop of a struct while there are references to it in order to change its value?
+  What about cases of a closed struct?

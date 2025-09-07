@@ -4,6 +4,35 @@ There are a number of design principles that are followed throughout Azoth and u
 justifications for many design decisions. This section defines those, rather than repeating their
 definitions below.
 
+## All Code is Technical Debt
+
+As simple as possible but no simpler
+
+## Pit of Success
+
+### Good Defaults
+
+## Verifiably Correct
+
+## Empower Library Authors
+
+## Professional Development
+
+* Teams
+* Medium or Larger Projects
+* Long Lived Codebases
+
+## Learn the Lessons of History
+
+## Published APIs Require a Higher Standard
+
+## Guide but Trust
+
+Guide developers to good solutions, approaches and uses, but ultimately give them the power.
+
+## Compiler is Your Assistant
+
+
 ## Allow for Future Expansions
 
 Design things in restrictive ways that allow for those restrictions to be lifted in the future if it

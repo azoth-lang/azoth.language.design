@@ -23,6 +23,7 @@
   * [Tests](tests.md)
   * [Independent Generics](independent-generics.md)
   * [Indexers](indexers.md)
+  * [No Inline Fields or Private Inheritance](no-inline-fields.md)
 * [Design Sources](design-sources.md)
 * Design Notes
   * [Self Antetype Design Notes](self-antetype.md)

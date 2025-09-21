@@ -865,7 +865,7 @@ of read only files when the list itself is read only (i.e. `read List[read File]
 
 In the model where `own` is its own capability, independent parameters do not reify the capability
 or ownership. Instead, an independent parameter `T` conceptually has the current capability of the
-parameter at all types. This capability is unknown within the class.
+parameter at all times. This capability is unknown within the class.
 
 Additionally, capability constraints must be applicable even to independent parameters. This is how
 the class can upcast the capability of the independent parameter to fit different situations.

@@ -123,4 +123,4 @@ achieved with a `move struct Var[T]`. This struct contains a `var T` field. To u
 variable to be mutated as `let x: Var[T]` instead of `var x: T`. Then one can pass around `Var[T]`
 references to that struct wherever it is allocated. This does impose some restrictions on the
 caller. However, given that this won't be used as much as it is used in C# and will be primarily for
-high-performance coding and special cases like array slices, it seems more the adequate.
+high-performance coding and special cases like array slices, it seems more than adequate.

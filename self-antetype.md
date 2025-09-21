@@ -1128,7 +1128,7 @@ public trait Equatable
 ```
 
 Note that here `Domain` is invariant because even though it is used in input position, it doesn't
-really make sense to expand the domain of that can be checked for equality.
+really make sense to expand the domain that can be checked for equality.
 
 We'll see in the next section that the latter approach is more consistent with comparison.
 

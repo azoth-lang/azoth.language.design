@@ -24,6 +24,9 @@
   * [Independent Generics](independent-generics.md)
   * [Indexers](indexers.md)
   * [No Inline Fields or Private Inheritance](no-inline-fields.md)
+  * [Optional Types](optional-types.md)
+  * [Closures](closures.md)
+  * [Type Lists](type-lists.md)
 * [Design Sources](design-sources.md)
 * Design Notes
   * [Self Antetype Design Notes](self-antetype.md)

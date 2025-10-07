@@ -16,6 +16,11 @@ As simple as possible but no simpler
 
 ## Empower Library Authors
 
+### Operators for Everything
+
+Few types are special. Instead, most compiler mediated things are accomplished by having the
+compiler invoke an operator that can be overloaded.
+
 ## Professional Development
 
 * Teams

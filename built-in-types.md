@@ -59,11 +59,11 @@ make clear that developers should expect that for reference types it would be re
 efficiently as a null pointer. However, the name "nullable" seemed to carry with it too much history
 and implied that they were bad or dangerous. A more neutral name seemed appropriate. Looking at the
 options, it seemed that "optional" was the clearest. Both Java and Swift name option types that and
-they are two of the languages most are concerned with clear names. Like Swift the `T?` syntax means
-it isn't necessary to write out the name optional.
+they are two of the languages most concerned with clear names. Like Swift the `T?` syntax means it
+isn't necessary to write out the name optional.
 
-When considering what to name the two values of an option type, `Some[T]` and `none`. Seemed the
-clearly better choice. However, that has been further simplified by eliminating the need for a
+When considering what to name the two values of an option type, `Some[T]` and `none` seemed the
+clearly best choice. However, that has been further simplified by eliminating the need for a
 `Some[T]` type.
 
 ## Tuples

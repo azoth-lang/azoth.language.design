@@ -175,3 +175,29 @@ for all AST nodes. It contains a private parent reference which is manages throu
 inheritance. Given that Azoth is meant to empower developers and not feel restrictive, the loss of
 the ability to directly do that would be painful. Keeping class inheritance also means the elegant
 and flexible `closed` value types mechanism can be kept.
+
+## Inherits Keyword
+
+For a long time, the Azoth language used `<:` to indicate that a type implemented a trait. A class
+declaration would be `class C : Base <: Trait`. The plan was that this subtype operator would be
+used in generic constraints (e.g. `where T <: Trait`). However, then implicit boxing was removed.
+Eventually it was realized that this meant that structs and values are not true subtypes. Thus a
+declaration `value Value <: Trait` doesn't make sense. The `Value` is not a subtype of the `Trait`.
+Instead it "conforms to" or perhaps "implements" the trait. A new syntax was needed.
+
+It made more sense to just use `:` instead as that still carried the concept of a conforms,
+implements or "is a" type relationship. That also kept generic constraints short (e.g. `where T:
+Trait`). Indeed it would still make sense to use `:` for a generic constraint that was really a
+subclass relationship since it still a subclass also implements the implicit trait of its base
+class. The question is then what to use to declare base classes?
+
+At first, it was thought that colon could be used for this. Thus for classes `class Class: Base :
+Trait`. However, for classes without a base class one would need to write `class Class: : Trait`
+which is awkward. Worse, the language would probably need to support `class Class:: Trait` which is
+strange to read and to parse since `::.` is the namespace qualifier and `::` will probably be used
+to access instance members from the type (e.g. `Class::method` is a method group without the
+instance).
+
+Instead some other syntax is needed. Options included `derives` and `<:`. However, `inherits` was
+chosen. It properly conveys that fields and members are being inherited. It also aligns the syntax
+weight with the fact that true inheritance should be used less frequently that implementing traits.

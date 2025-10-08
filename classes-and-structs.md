@@ -198,6 +198,8 @@ strange to read and to parse since `::.` is the namespace qualifier and `::` wil
 to access instance members from the type (e.g. `Class::method` is a method group without the
 instance).
 
-Instead some other syntax is needed. Options included `derives` and `<:`. However, `inherits` was
-chosen. It properly conveys that fields and members are being inherited. It also aligns the syntax
-weight with the fact that true inheritance should be used less frequently that implementing traits.
+Instead some other syntax is needed. Options included `derives`, `extends` and `<:`. The keyword
+`extends` would be a good fit, but extensions are declared with `extend` and that would be
+confusing. Instead, `inherits` was chosen. It properly conveys that fields and members are being
+inherited. It also aligns the syntax weight with the fact that true inheritance should be used less
+frequently that implementing traits.

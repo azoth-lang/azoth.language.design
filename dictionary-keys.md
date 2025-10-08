@@ -158,12 +158,13 @@ Options:
 1. ~~Keys are `const` or `id`~~ (At least not as a general solution that applies to sets
   too. For dictionaries only, it is still possible.)
 2. Dictionary Comparers Operate on `const` or `id`
-3. ~~Stricter Orderings~~ (To complex and still error prone.)
+3. ~~Stricter Orderings~~ (Too complex and still error prone.)
 4. Do Not Restrict API
 5. Keys are `const` or `id` but Sets Are Unrestricted
 
 For now, I am going to try option 2 and see what that does to the language. I will add the ability
 to do `shareable T` where `T` is a generic type. This means the type `T` upcast to a shareable
-capability. Applying this to an `ind` type requires that it be `shareable ind`. This will be part of
-a larger system of allowing capability sets to be applied to generic types. This seems like it will
-allow `aliasable T` to act as the equivalent of alias types in Pony (i.e. `T!`).
+capability. Applying this to an `independent` type requires that it be `independent(shareable)`.
+This will be part of a larger system of allowing capability sets to be applied to generic types.
+This seems like it will allow `aliasable T` to act as the equivalent of alias types in Pony (i.e.
+`T!`).

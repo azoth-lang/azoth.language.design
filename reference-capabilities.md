@@ -129,3 +129,22 @@ tracking of the two layers separate even when upcasting to `Read_Box`.
 
 From this example, it can be seen why independence is distinct from variance. As a result, it has
 been decided to make them fully distinct. Hopefully, that will work well and be simple to use.
+
+## Why `id`
+
+The `id` capability is strange. It allows access to `let const` fields as `const` and other `let`
+fields as `id`. Sharing isn't tracked for classes, but is tracked for structs. Project Midori didn't
+have it. Neither does L42. It seems like Pony has it mostly because you can send messages (aka call
+behaviors) on an actor with a `tag` reference. Since Azoth doesn't have those, perhaps it doesn't
+need `id`.
+
+Reasons to have id:
+
+* When a reference value is moved, what is left behind is an `id` reference
+* Currently used to support dictionary keys and sets compared by identity. Without this, the
+  identity equivalence comparer would have to take `read`. This would allow people to create
+  comparers that compared by state that could be mutated.
+  * Could the `Equivalence[T]` be somehow restricted so that the identity equivalence was the only
+    non-constant one? (But what about equivalence of nullable references? Or some other user type
+    that made sense because it carried a reference? For example, a value carrying a reference and
+    comparing them by the reference.)

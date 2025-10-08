@@ -17,6 +17,7 @@ Contents:
 * [Const with Regular Parameter](#const-with-regular-parameter)
 * [Special Pseudo Reference](#special-pseudo-reference)
 * [Variable Capability with `mut` Parameter Capability and `self.T` Initializer](#variable-capability-with-mut-parameter-capability-and-selft-initializer)
+* [Random Thoughts](#random-thoughts)
 
 ## Variable Capability with `iso` Parameter Capability
 
@@ -116,11 +117,11 @@ Problems:
  Example[mut T]` would not permit `Example[mut Foo?]` because the parameter is actually `const`.
 * May have issues with nesting. For example, in the type `Factory[iso Foo?]` is the capability of
   `Foo` independent? Perhaps this is not a problem. Perhaps it is a general rule that nested
-  independent parameters are not longer independent?
+  independent parameters are no longer independent?
 * Aliasing produces the wrong capabilities. Consider the type `Array[independent T]` which ought to
   have the same behavior. Given a `mut Array[own Struct]` then an alias to it ought to still be `mut
   Array[own Struct]`, not `mut Array[mut Struct]`. However, this approach would require the latter
-  behavior.
+  behavior. (This might not be right)
 
 ## Const with Regular Parameter
 
@@ -177,3 +178,43 @@ public closed value Optional[mut T]
     case Some(value: self.T);
 }
 ```
+
+## Random Thoughts
+
+classes and structs have a single "instance"
+
+optional structs would need to follow the rules that `id` sharing is tracked. A regular value
+wouldn't do that because `id Value[T]` doesn't track sharing. That would be fine for a class since
+internally it has a non-id reference
+
+Overload `Option[T]` on whether the parameter is a struct?  Use Value for non-struct and Struct for
+struct?
+
+* Disallow optional structs
+* Disallow optional iso/own structs
+
+What if internal references could only point into the heap, not the stack? Then either there
+wouldn't be hybrid types or they could behave like any other type for capabilities. Then `own` would
+exist only for drop types.
+
+Alternatively, structs don't exist and `Var[T]` and `Ref[T]` use `unsafe` (but how does the runtime
+understand interior references?)
+
+* Disallow `id` on structs?
+* Disallow `id` on structs that aren't known to be on the heap?
+
+If you did either of those, how would you be able to use struct references as keys in a dictionary?
+
+* Structs on the stack can only be lent? (Doesn't work because you are allowed to take an `id` of a
+`lent` parameter) Structs on the stack can't be referenced doesn't work because references are how
+you call methods on it. Bring back C# type `ref` and `in` to work with structs
+
+**Good Idea:** Allow `id` to structs on the stack but disallow any access through them. That way,
+they can point to invalid addresses without problem? What if that memory is later reused for a heap
+object though? Just make it so `id H` never keeps an object alive! They still have to be updated if
+an object moves but it is ok if they dangle. This also allows for leaving an `id` behind when moving
+structs.
+
+Since you can't freeze a `drop` type, maybe `own` isn't a supertype of `iso` but instead replaces
+`iso`? Likewise, structs on the stack would only support `own` since they can't be `const`. Structs
+on the heap would still use `iso` unless they were drop types

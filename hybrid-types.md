@@ -1,11 +1,11 @@
 # Hybrid Types
 
-In the previous version of Azoth, there would classes which were reference types allocated on the
-type. There were also structs which were allocated on the stack or inline in objects. Structs could
+In the previous version of Azoth, there were classes which were reference types allocated on the
+heap. There were also structs which were allocated on the stack or inline in objects. Structs could
 be either `copy struct`s or `move struct`s. A copy struct was passed by value (i.e. copied). A move
-struct applied the rules of a `move` type which meant it had to be moved and would leave behind and
-a value with an `id` capability. A move struct would then not be very useful the ability to refer to
-it without `ref` and `iref` types.
+struct applied the rules of a `move` type which meant it had to be moved and would leave behind a
+value with an `id` capability. A move struct would then not be very useful without the ability to
+refer to it without `ref` and `iref` types.
 
 Variable references were formed with `ref`, `iref` and `var`. A `ref` could refer either to a
 binding on the stack or to a field on the heap. The compiler would enforce rules that ensured

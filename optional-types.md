@@ -17,7 +17,9 @@ Contents:
 * [Const with Regular Parameter](#const-with-regular-parameter)
 * [Special Pseudo Reference](#special-pseudo-reference)
 * [Variable Capability with `mut` Parameter Capability and `self.T` Initializer](#variable-capability-with-mut-parameter-capability-and-selft-initializer)
-* [Random Thoughts](#random-thoughts)
+* [Brainstorming](#brainstorming)
+  * [Side Note](#side-note)
+* [Decisions](#decisions)
 
 ## Variable Capability with `iso` Parameter Capability
 
@@ -179,7 +181,7 @@ public closed value Optional[mut T]
 }
 ```
 
-## Random Thoughts
+## Brainstorming
 
 classes and structs have a single "instance"
 
@@ -217,4 +219,90 @@ structs.
 
 Since you can't freeze a `drop` type, maybe `own` isn't a supertype of `iso` but instead replaces
 `iso`? Likewise, structs on the stack would only support `own` since they can't be `const`. Structs
-on the heap would still use `iso` unless they were drop types
+on the heap would still use `iso` unless they were drop types. The issue with this is that they
+still don't behave like other types for the purposes of generics. Maybe structs always use `own` but
+are allowed outside of `drop` types? But how is that rule handled for generics? Or maybe structs are
+just `drop` types and we go back to drop structs vs copy structs?
+
+`own` can't just replace `iso` because passing a drop type to a function requires passing `iso` so
+that it can safely recover isolation when it goes out of scope.
+
+Re-reviewing the MS paper, they did not allow `iso` on generic arguments. Likewise, they did not
+allow fields to lose isolation. Thus `iso` acted much more like a genuine affine type. One route
+would be to treat it more like an affine type in all cases. There would however need to be some
+special aspect for parameters to allow a parameter to explicitly receive isolation. Likewise `temp
+iso` would have to be an affine type that couldn't be used as a generic parameter.
+
+If `iso` was truly disallowed for generic arguments, would that prevent `Option[T]` from supporting
+`iso`?
+
+There is no way around it. To put a struct inside a value type while allowing `own` requires some
+kind of special "field with the same capability as the value."
+
+`iso` is sometimes needed as a generic type because you need it to use as a parameter or return type.
+
+The older docs treated `iso` fields as having to be moved out of. The newer docs say that isolation
+is just lost. I think the move out of is more proper. Now that I have the move assign idea `x =
+move y = z;` that gives a syntax for swapping out of fields.
+
+Normally, all fields of a value must be `let` and `aliasable` because of copying. Thus a field could
+not be `iso` or `own`. `iso` could never be supported because it acts as an affine type in a field.
+If the value was a drop type then it could support `own` drop type fields but it would need a way to
+vary their capability with its own capability. Likewise for structs it would need to vary the
+capability with its own and copying would need to apply the hybrid type rules to make a reference.
+
+I feel like the affine rules mean that I ought to require assignments into an `iso` variable to
+always be `iso` values even if the previous value has been aliased. But that doesn't work for
+structs since the reference to the old value will be updated to reference the new value. Thus I
+guess that later assignments should not have to be isolated? Well the value has to be moved, so the
+value will be isolated, but the variable won't be isolated afterward, it will just be `own`. Yet,
+the first assigning into an uninitialized `var` does need to be an `iso` variable. I think the value
+does need to be `iso`. If you don't want that, don't use `iso`. You can still use `own`. The flow
+typing rules exist mostly for parameters and generics. Speaking of generics, this is really annoying
+for generics because one must declare locals `aliasable T` to avoid needed new value to be `iso` all
+the time. I think that is the reason to not require `iso` on later assignments.
+
+How do initializers with `self T` work?
+
+Consider `move` on a generic parameter type that may or may not be `iso` or `own`. How does the
+compiler handle that? It doesn't know if it needs to recover `iso` or indeed whether it even can.
+Perhaps `move` is just moving the value and leaving `id` behind. The recover is implicit. Thus you
+can use `move` on the generic parameter type and it will work whether you are moving `iso`, `own`,
+or some other capability like `mut`. That does seem quite right. To move a struct, isolation must be
+recovered so there can be no other local references. Rather it is like `move` must become a no-op
+for generic types that don't need it.
+
+For nested nullables, `?.` should go through multiple optional layers. But there needs to be a form
+of `??` that goes through only one layer. This is for situations like poping a value from a stack of
+optional values and handling empty stack differently than `none` on the stack. This could either be
+that one must use pattern matching, or there could be additional operators. It could be that `??`
+only evaluates one layer of optional while `???` or `??*` evaluates multiple layers.
+
+### Side Note
+
+Maybe `if` with `else` should only allow `bool` while `if` without `else` allows `bool?`? But maybe
+it still doesn't allow `bool??` because should that still follow ternary logic?
+
+## Decisions
+
+1. Hybrid allows `id`. One can access nothing on a hybrid type with the capability `id` except for
+   `identity_hash()` and `@==`. This restriction makes it safe to keep an `id` reference to
+   something on the stack that has gone out of scope. The GC supports this because they are special
+   references which do not keep the referenced object alive, however, they will be updated when
+   objects are relocated.
+2. Generics default `aliasable`. This is consistent with the Midori paper not allowing `iso` for generics. It also avoids any issues with structs or drop types since `own` is not aliasable. Thus a default generic parameter can be a struct reference but not an inline struct. It can be a drop type but not an owned drop type.
+3. Conditional drop is `drop[T1, T2...]`, those can be stored in fields
+4. Generics allow structs, values, and drop by default. This is usually hidden by the default `aliasable` constraint. If the `any` constraint is used then structs, values, and drop types can be used including `iso` and `own`. The compiler enforces that the implementations follow the correct safety limits to make that possible.
+5. If desired, one can use `where T: not drop` or `not struct` or `not value` to exclude those from a generic type. This can reduce the restrictions on how a generic `any` type can be used.
+6. `if` works as above
+7. `iso` on fields is maintained, you must move out of them to access the value.
+8. Move assign is supported
+9. Moving out of a field without move assign leaves the default value
+10. There should be a default value operator
+11. setters return values to support move assign
+12. Values support `self T` parameters which can be stored as fields (they must be `drop[T]` unless
+    `T: not drop`)
+13. Reassigning into an `iso` variable does not require an `iso` value
+14. Need to spell out how `move` works on generic parameter types. It recovers isolation locally,
+    but doesn't worry about whether the caller might have reference. If the type is `iso` then there
+    will be no caller references. If the type isn't `iso` then the caller references will be ok.

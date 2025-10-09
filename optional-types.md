@@ -278,6 +278,27 @@ optional values and handling empty stack differently than `none` on the stack. T
 that one must use pattern matching, or there could be additional operators. It could be that `??`
 only evaluates one layer of optional while `???` or `??*` evaluates multiple layers.
 
+I don't know. I can't seem to make the types work out for any of the options. There are always
+issues with the initializer even for `self T` or `none T`. Maybe optionals just need to be a special
+type?
+
+Having optional be `const value` can't work. An `iso Foo?` should be usable where an `iso` type is
+expected. Also, how could copying possibly work. You can't say that independent parameters work
+differently for value types because `Array[independent T]` needs the independent parameter to act as
+if the type were a reference type.
+
+If optional has just a regular capability, then it would be possible to freeze such a value on the
+stack even if it held a struct. That doesn't work.
+
+```azoth
+let x: mut Struct? = ....;
+
+freeze x; // By the reference rules, this should be freezable
+```
+
+How do hybrid types interact with plain type overload resolution? You can't tell whether a given
+struct plain type is a reference or not.
+
 ### Side Note
 
 Maybe `if` with `else` should only allow `bool` while `if` without `else` allows `bool?`? But maybe

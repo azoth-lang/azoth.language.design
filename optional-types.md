@@ -18,6 +18,12 @@ Contents:
 * [Special Pseudo Reference](#special-pseudo-reference)
 * [Variable Capability with `mut` Parameter Capability and `self.T` Initializer](#variable-capability-with-mut-parameter-capability-and-selft-initializer)
 * [Brainstorming](#brainstorming)
+  * [Restrict Hybrid Types to the Heap](#restrict-hybrid-types-to-the-heap)
+  * [Hybrid Types become Drop on the Stack](#hybrid-types-become-drop-on-the-stack)
+  * [Structs Can't be Generic Arguments](#structs-cant-be-generic-arguments)
+  * [Structs on Stack Must be Passed by `lent` Reference](#structs-on-stack-must-be-passed-by-lent-reference)
+  * [All Structs Are Drop](#all-structs-are-drop)
+  * [Problem: Identity Hash on Structs Isn't Stable](#problem-identity-hash-on-structs-isnt-stable)
   * [Side Note](#side-note)
 * [Decisions](#decisions)
 
@@ -189,7 +195,7 @@ optional structs would need to follow the rules that `id` sharing is tracked. A 
 wouldn't do that because `id Value[T]` doesn't track sharing. That would be fine for a class since
 internally it has a non-id reference
 
-Overload `Option[T]` on whether the parameter is a struct?  Use Value for non-struct and Struct for
+Overload `Option[T]` on whether the parameter is a struct? Use Value for non-struct and Struct for
 struct?
 
 * Disallow optional structs
@@ -259,7 +265,7 @@ value will be isolated, but the variable won't be isolated afterward, it will ju
 the first assigning into an uninitialized `var` does need to be an `iso` variable. I think the value
 does need to be `iso`. If you don't want that, don't use `iso`. You can still use `own`. The flow
 typing rules exist mostly for parameters and generics. Speaking of generics, this is really annoying
-for generics because one must declare locals `aliasable T` to avoid needed new value to be `iso` all
+for generics because one must declare locals `aliasable T` to avoid needing new value to be `iso` all
 the time. I think that is the reason to not require `iso` on later assignments.
 
 How do initializers with `self T` work?
@@ -268,8 +274,8 @@ Consider `move` on a generic parameter type that may or may not be `iso` or `own
 compiler handle that? It doesn't know if it needs to recover `iso` or indeed whether it even can.
 Perhaps `move` is just moving the value and leaving `id` behind. The recover is implicit. Thus you
 can use `move` on the generic parameter type and it will work whether you are moving `iso`, `own`,
-or some other capability like `mut`. That does seem quite right. To move a struct, isolation must be
-recovered so there can be no other local references. Rather it is like `move` must become a no-op
+or some other capability like `mut`. That doesn't seem quite right. To move a struct, isolation must
+be recovered so there can be no other local references. Rather it is like `move` must become a no-op
 for generic types that don't need it.
 
 For nested nullables, `?.` should go through multiple optional layers. But there needs to be a form
@@ -285,7 +291,7 @@ type?
 Having optional be `const value` can't work. An `iso Foo?` should be usable where an `iso` type is
 expected. Also, how could copying possibly work. You can't say that independent parameters work
 differently for value types because `Array[independent T]` needs the independent parameter to act as
-if the type were a reference type.
+if the type were a reference type but `Array` is a value type.
 
 If optional has just a regular capability, then it would be possible to freeze such a value on the
 stack even if it held a struct. That doesn't work.
@@ -299,6 +305,68 @@ freeze x; // By the reference rules, this should be freezable
 How do hybrid types interact with plain type overload resolution? You can't tell whether a given
 struct plain type is a reference or not.
 
+I had an idea that maybe hybrid types could be made more consistent with other types by making it so
+that `const H` was stored inline and copied by value. However, that has a problem. You can have
+`read` references to a `const` value so there would still be issues with `const` items going out of
+scope leaving dangling `read` references. I think that freezing would be ok because to freeze you
+must first recover isolation enough to ensure no mutable references. Thus the actual owned value
+would have to be involved and could be the thing frozen. I guess maybe you could treat `const` as
+also having ownership and structs going out of scope as a sort of special case that isn't truly
+recovering isolation but making sure no non-id references exist. But I still think that there would
+be a difference since for reference types `const` sharing is not tracked. Here you need to track
+which read references are in the same sharing set as the `const`.
+
+Actually, thinking about this more, I think that `const` hybrid types *must* be stored inline. If
+they aren't, then there must be two capabilities. One for `own const` and another for reference
+`const`.
+
+### Restrict Hybrid Types to the Heap
+
+What if I restrict hybrid types to the heap? Then their capabilities would be much closer to the
+capabilities of any other value. The thing is they would still need the special `own` capability to
+allow manipulating them directly in fields and collections. Otherwise, `iso` would require that they
+be moved in and out of the fields. I think `const` would still be an issue because there would be a
+distinction between
+
+### Hybrid Types become Drop on the Stack
+
+Explains why no `const` on stack. Might think it would allow optional to become a drop type when it
+stores a struct on the stack. However, `Array[Struct]` isn't a drop type even though `Array` is a
+value type. So you'd still need some special thing for optional
+
+### Structs Can't be Generic Arguments
+
+Maybe struct types can't be used as generic parameters except for independent. Then there are no
+optional structs. Generic types can flexibility be used as needed. However, the same could be
+achieved with `where T: not struct` when needed and still allow the ability to have them at other
+times.
+
+### Structs on Stack Must be Passed by `lent` Reference
+
+Note this does work once you allow the special behavior of `id` to work with stack values that go
+out of scope. The idea behind this would be to allow structs to be frozen on the stack. So `const`
+struct values are stored inline and copied by value. They can be referenced by `read` but since
+those references must be `lent`, they won't ever outlive the value on the stack. This roughly uses
+`lent` to enforce the sort of `ref` rules from C#. I had previously ruled that out and said `lent`
+behaved differently, why? Was it when you could have `lent` return?
+
+This still feels like an unnecessary restriction and doesn't help with optional types.
+
+### All Structs Are Drop
+
+If all structs are drop types, then they fit into the type system better. They can never be
+constant. They behave just like drop types. However, that doesn't work for the use cases of
+`Var[T]`. Internally, an `Array[T]` must be a reference to a `Var[T]` in a raw array which means
+that all arrays would have to be drop types so they could handle that.
+
+### Problem: Identity Hash on Structs Isn't Stable
+
+The identity hash of object is stable only because when relocating object the GC preserves the old
+hash value. That trick doesn't work for structs in fields because there is no place to store the old
+hash value when relocating. The struct is a field within the object. Unless we were to add space to
+all objects to store hashes for all struct fields which doesn't make sense. Thus, `identity_hash()`
+shouldn't be allowed on structs and so structs cannot be used as dictionary keys.
+
 ### Side Note
 
 Maybe `if` with `else` should only allow `bool` while `if` without `else` allows `bool?`? But maybe
@@ -311,10 +379,17 @@ it still doesn't allow `bool??` because should that still follow ternary logic?
    something on the stack that has gone out of scope. The GC supports this because they are special
    references which do not keep the referenced object alive, however, they will be updated when
    objects are relocated.
-2. Generics default `aliasable`. This is consistent with the Midori paper not allowing `iso` for generics. It also avoids any issues with structs or drop types since `own` is not aliasable. Thus a default generic parameter can be a struct reference but not an inline struct. It can be a drop type but not an owned drop type.
-3. Conditional drop is `drop[T1, T2...]`, those can be stored in fields
-4. Generics allow structs, values, and drop by default. This is usually hidden by the default `aliasable` constraint. If the `any` constraint is used then structs, values, and drop types can be used including `iso` and `own`. The compiler enforces that the implementations follow the correct safety limits to make that possible.
-5. If desired, one can use `where T: not drop` or `not struct` or `not value` to exclude those from a generic type. This can reduce the restrictions on how a generic `any` type can be used.
+2. Generics default `aliasable`. This is consistent with the Midori paper not allowing `iso` for
+   generics. It also avoids any issues with structs or drop types since `own` is not aliasable. Thus
+   a default generic parameter can be a struct reference but not an inline struct. It can be a drop
+   type but not an owned drop type.
+3. Conditional drop is `drop[T1, T2...]`, those types can be stored in fields.
+4. Generics allow structs, values, and drop by default. This is usually hidden by the default
+   `aliasable` constraint. If the `any` constraint is used then structs, values, and drop types can
+   be used including `iso` and `own`. The compiler enforces that the implementations follow the
+   correct safety limits to make that possible.
+5. If desired, one can use `where T: not drop` or `not struct` or `not value` to exclude those from
+   a generic type. This can reduce the restrictions on how a generic `any` type can be used.
 6. `if` works as above
 7. `iso` on fields is maintained, you must move out of them to access the value.
 8. Move assign is supported
@@ -323,7 +398,9 @@ it still doesn't allow `bool??` because should that still follow ternary logic?
 11. setters return values to support move assign
 12. Values support `self T` parameters which can be stored as fields (they must be `drop[T]` unless
     `T: not drop`)
-13. Reassigning into an `iso` variable does not require an `iso` value
+13. Reassigning into an `iso` local variable does not require an `iso` value. (`iso` is not
+    recommended to be explicitly used on local variables. Generate a warning for that unless it is a
+    parameter.)
 14. Need to spell out how `move` works on generic parameter types. It recovers isolation locally,
     but doesn't worry about whether the caller might have reference. If the type is `iso` then there
     will be no caller references. If the type isn't `iso` then the caller references will be ok.

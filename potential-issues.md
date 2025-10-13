@@ -76,6 +76,9 @@ Should an exclusive mutability reference capability be included (e.g. `xmut`)? I
 properly working with iterator invalidation. However, it is complex and makes it difficult for
 developers to decide when they ought to use it.
 
-## Syntax for `nonwritable out`
-
 ## Dictionary Keys and `shareable ind`
+
+## Capability Set Including `own`
+
+If `iso` maintains isolation on fields, then a capability set that includes `own` but not `iso` is
+needed so that generics can allow `own` but not `iso`.

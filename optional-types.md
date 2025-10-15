@@ -26,6 +26,7 @@ Contents:
   * [Problem: Identity Hash on Structs Isn't Stable](#problem-identity-hash-on-structs-isnt-stable)
 * [How `if` handles `bool?`](#how-if-handles-bool)
 * [Summary](#summary)
+* [Correction for Optionals with Generics](#correction-for-optionals-with-generics)
 * [Decisions](#decisions)
 
 ## Variable Capability with `iso` Parameter Capability
@@ -410,6 +411,13 @@ wrap a type that one doesn't know whether it will be a reference type or struct 
 special value wrapper types. It doesn't seem to be worth it to add a complex new kind of generic
 argument that won't have any use cases. If use cases are found in the future, it can be added.
 However, for now it seems to make the most sense to just special case optional types.
+
+## Correction for Optionals with Generics
+
+Actually, many generic arguments will be restricted to disallow optional types. Often a constraint
+that explicitly allows optional types will be required. Given that, it is possible that optional
+types could be `const value` types. However, the type argument would still need a special treatment
+so that it varies properly when copied.
 
 ## Decisions
 

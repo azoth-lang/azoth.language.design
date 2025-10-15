@@ -24,7 +24,8 @@ Contents:
   * [Structs on Stack Must be Passed by `lent` Reference](#structs-on-stack-must-be-passed-by-lent-reference)
   * [All Structs Are Drop](#all-structs-are-drop)
   * [Problem: Identity Hash on Structs Isn't Stable](#problem-identity-hash-on-structs-isnt-stable)
-  * [Side Note](#side-note)
+* [How `if` handles `bool?`](#how-if-handles-bool)
+* [Summary](#summary)
 * [Decisions](#decisions)
 
 ## Variable Capability with `iso` Parameter Capability
@@ -367,18 +368,55 @@ hash value when relocating. The struct is a field within the object. Unless we w
 all objects to store hashes for all struct fields which doesn't make sense. Thus, `identity_hash()`
 shouldn't be allowed on structs and so structs cannot be used as dictionary keys.
 
-### Side Note
+## How `if` handles `bool?`
 
 Maybe `if` with `else` should only allow `bool` while `if` without `else` allows `bool?`? But maybe
 it still doesn't allow `bool??` because should that still follow ternary logic?
 
+## Summary
+
+Declaring optional types within the type system of Azoth definitely requires special support. At
+some point in the past, something like that support was termed "ref structs". With all the changes
+to Azoth, that no longer makes sense and indeed may not have been a properly formed concept at the
+time.
+
+What is needed is not simply an independent type parameter that is reflected out to the value
+containing it. To see why, consider `Array[independent T]`. The array type is a value type with an
+independent parameter. When aliasing an `Array[own Struct]` the alias is also an `Array[own
+Struct]`. When aliasing `Optional[own Struct]` the alias ought to be `Optional[mut Struct]`. Thus an
+optional type treats the capability differently than an independent parameter.
+
+What is needed is not simply the capability variation of the value combined with some generic
+parameter. The problem is that `own Option[Struct]` would not be allowed. Even if structs were
+considered to be drop types when stored on the stack, that would not be enough. First, they would
+not be considered drop types when stored on the heap. But more fundamentally, the type parameter
+cannot be treated as being stored on the stack. It could be that `Option[T]` stores the `T` value on
+the heap somewhere (at least as far as the type system knows). Indeed, by default value fields must
+be `aliasable` `let` fields so a struct couldn't be stored inline in a value.
+
+Even the `value Optional[self T]` declaration doesn't seem to capture it. The type parameter doesn't
+simply take on the capability of the value. Rather, the type parameter determines what capabilities
+are appropriate and the type parameter must be stored inline in the the value. If one tried to use
+that type parameter as a parameter to some nested reference type, it would not be valid because it
+would vary in ways that aren't possible for a regular type parameter.
+
+Something like `value Optional[wraps T]` that explicitly declares the value as just being a wrapper
+for the type `T` seems most appropriate. But is this needed for cases other than optional types? The
+only other use case I can think of is representing database nulls. However, that seems like an edge
+case that may not be needed. Why not just use optional types? If a value were wrapping a reference
+type, regular generics and conditional drop would be sufficient. If one were wrapping a struct, then
+often one could simply use a struct as the wrapper rather than a value. It is only if one needs to
+wrap a type that one doesn't know whether it will be a reference type or struct that one needs the
+special value wrapper types. It doesn't seem to be worth it to add a complex new kind of generic
+argument that won't have any use cases. If use cases are found in the future, it can be added.
+However, for now it seems to make the most sense to just special case optional types.
+
 ## Decisions
 
 1. Hybrid allows `id`. One can access nothing on a hybrid type with the capability `id` except for
-   `identity_hash()` and `@==`. This restriction makes it safe to keep an `id` reference to
-   something on the stack that has gone out of scope. The GC supports this because they are special
-   references which do not keep the referenced object alive, however, they will be updated when
-   objects are relocated.
+   `@==`. This restriction makes it safe to keep an `id` reference to something on the stack that
+   has gone out of scope. The GC supports this because they are special references which do not keep
+   the referenced object alive, however, they will be updated when objects are relocated.
 2. Generics default `aliasable`. This is consistent with the Midori paper not allowing `iso` for
    generics. It also avoids any issues with structs or drop types since `own` is not aliasable. Thus
    a default generic parameter can be a struct reference but not an inline struct. It can be a drop
@@ -388,19 +426,20 @@ it still doesn't allow `bool??` because should that still follow ternary logic?
    `aliasable` constraint. If the `any` constraint is used then structs, values, and drop types can
    be used including `iso` and `own`. The compiler enforces that the implementations follow the
    correct safety limits to make that possible.
-5. If desired, one can use `where T: not drop` or `not struct` or `not value` to exclude those from
-   a generic type. This can reduce the restrictions on how a generic `any` type can be used.
+5. If desired, one can use `where T: not drop` or `not struct` or `not value` or `where T: object`
+   to exclude those from a generic type. This can reduce the restrictions on how a generic `any`
+   type can be used.
 6. `if` works as above
 7. `iso` on fields is maintained, you must move out of them to access the value.
 8. Move assign is supported
 9. Moving out of a field without move assign leaves the default value
-10. There should be a default value operator
+10. There should be a default value operator (this is `operator init`)
 11. setters return values to support move assign
-12. Values support `self T` parameters which can be stored as fields (they must be `drop[T]` unless
-    `T: not drop`)
-13. Reassigning into an `iso` local variable does not require an `iso` value. (`iso` is not
+12. Reassigning into an `iso` local variable does not require an `iso` value. (`iso` is not
     recommended to be explicitly used on local variables. Generate a warning for that unless it is a
     parameter.)
-14. Need to spell out how `move` works on generic parameter types. It recovers isolation locally,
+13. Need to spell out how `move` works on generic parameter types. It recovers isolation locally,
     but doesn't worry about whether the caller might have reference. If the type is `iso` then there
     will be no caller references. If the type isn't `iso` then the caller references will be ok.
+14. Optional types are special there is no way to declare them within the regular Azoth type system.
+    Thus the IL will need to directly support them.

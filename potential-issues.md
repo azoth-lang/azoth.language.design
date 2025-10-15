@@ -45,13 +45,13 @@ Without implicit boxing, a generic type that could be a value type cannot be pas
 reference. This greatly limits what can be done in generic types that don't constrain their generic
 parameters.
 
-## Closed Struct Tearing
+## Closed Value/Struct Tearing
 
-When assigning a closed struct variable a new value, the new value may have a different
-discriminator. The challenge is that the discriminator can change the layout of the struct. Since
-writing structs is not atomic, the garbage collector could read the value in a state where the
-discriminator doesn't match the values in memory and could therefor follow a value that is an
-invalid reference.
+When assigning a closed value or struct variable a new value, the new value may have a different
+discriminator. The challenge is that the discriminator can change the layout of the data. Since
+writing values and structs is not atomic, the garbage collector could read the value in a state
+where the discriminator doesn't match the values in memory and could therefor follow a value that is
+an invalid reference.
 
 Possible (Partial) Resolutions:
 
@@ -63,6 +63,7 @@ Possible (Partial) Resolutions:
   thread and the GC thread that have to coordinate.
 * Do not allow assignment into closed types that could possibly change the discriminator. (Not as
   crazy as it sounds given `let`.)
+* **Recover isolation on the previous value before assigning into it to prevent broken references.**
 
 ## Cancellation
 
@@ -76,7 +77,7 @@ Should an exclusive mutability reference capability be included (e.g. `xmut`)? I
 properly working with iterator invalidation. However, it is complex and makes it difficult for
 developers to decide when they ought to use it.
 
-## Dictionary Keys and `shareable ind`
+## Dictionary Keys and `independent(shareable)`
 
 ## Capability Set Including `own`
 

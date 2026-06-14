@@ -115,6 +115,26 @@ that can be referred to with pointers. Thus the three kinds of types and their d
 Note that `value` declarations do not allow `var` fields (only `let` fields). This ensure they are
 safe to copy regardless of what reference capability they have.
 
+### Terminology Update
+
+There are no longer `move` types. In their place are `drop` types. It was realized not all hybrid
+types are drop types. Instead, hybrid types have the special `own` capability regardless of whether
+they are drop types.
+
+It is still unclear what the proper terminology and keywords to use are. Currently `class`,
+`struct`, and `value` are used. However, that leads to an awkward problem of that to name the
+equivalent of `object` declarations for value types. Currently they are `unit value`. The `unit
+value` keywords are confusing because they sound like they should be a value used with unit of
+measures. Indeed, if something like F# style generic arguments are needed to support units of
+measure, there could literally be unit values.
+
+Another option would be to use `record` for value types. Then `value` could be used for `unit
+value`. The problem with that is that "record types" currently refers to the shorthand syntax for
+types whose properties are declared inline with the class/struct/value declaration. So a `record`
+keyword could be confusing giving the term "record" two different meanings. Alternatively, `value
+type` could be used for value types and `value` for `unit value`. What is bad about that is the
+declaration isn't just of the type, but is a "template" for creating the instances.
+
 ## Variable References
 
 It might be thought that this new design has lost the important functionality of having `ref var`

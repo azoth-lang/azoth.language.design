@@ -16,7 +16,7 @@ Possible Resolutions
 
 * Restrict Trait Functions: A trait function is restricted what it can do with the `self` reference
   to things that would be safe regardless of whether `Self` is a class or struct unless a constraint
-  `where Self : struct` or `where Self : class` is applied. This implies that traits are truly
+  `where Self: struct` or `where Self: object` is applied. This implies that traits are truly
   distinct from classes. While they can be used as reference types, when they are applied to structs
   or used as generic constraints they are not working that way.
 * Use `iref` and Allow Conversion: A trait function can only be overridden by an `iref self`

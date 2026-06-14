@@ -135,6 +135,10 @@ keyword could be confusing giving the term "record" two different meanings. Alte
 type` could be used for value types and `value` for `unit value`. What is bad about that is the
 declaration isn't just of the type, but is a "template" for creating the instances.
 
+Given that hybrid types are the new concept, they should really get the new keyword. That suggests
+`class`, `hybrid struct`, and `struct`. Leaving `value` for unit values. That also preserves
+`struct` for a copy-by-value type like it is in other languages.
+
 ## Variable References
 
 It might be thought that this new design has lost the important functionality of having `ref var`

@@ -122,7 +122,7 @@ types are drop types. Instead, hybrid types have the special `own` capability re
 they are drop types.
 
 It is still unclear what the proper terminology and keywords to use are. Currently `class`,
-`struct`, and `value` are used. However, that leads to an awkward problem of that to name the
+`struct`, and `value` are used. However, that leads to an awkward problem of how to name the
 equivalent of `object` declarations for value types. Currently they are `unit value`. The `unit
 value` keywords are confusing because they sound like they should be a value used with unit of
 measures. Indeed, if something like F# style generic arguments are needed to support units of

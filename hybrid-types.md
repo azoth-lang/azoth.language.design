@@ -115,7 +115,7 @@ that can be referred to with pointers. Thus the three kinds of types and their d
 Note that `value` declarations do not allow `var` fields (only `let` fields). This ensure they are
 safe to copy regardless of what reference capability they have.
 
-### Terminology Update
+### Terminology Update 1
 
 There are no longer `move` types. In their place are `drop` types. It was realized not all hybrid
 types are drop types. Instead, hybrid types have the special `own` capability regardless of whether
@@ -138,6 +138,49 @@ declaration isn't just of the type, but is a "template" for creating the instanc
 Given that hybrid types are the new concept, they should really get the new keyword. That suggests
 `class`, `hybrid struct`, and `struct`. Leaving `value` for unit values. That also preserves
 `struct` for a copy-by-value type like it is in other languages.
+
+### Terminology Update 2
+
+The use of `value` for value types and `unit value` for the equivalent of `object` has been an
+ongoing annoyance. In the C++/C# linage, a `struct` should be a pass-by-value value type. The
+keywords are just confusing. The new hybrid type ought to be the thing with a unique name. So new
+names have been decided.
+
+Another reason `record` would be a bad keyword to use is that they are generally used for types that
+are more immutable or more raw data. That is not what a hybrid type is.
+
+I searched for a new keyword to use for hybrid types. There doesn't seem to be one. The best I could
+find was `dimorph`. But even that doesn't make sense. When we think of a `struct` or `class`
+declaration, we are declaring the data structure and only implicitly that it is a reference type or
+value types. A keyword like `dimorph` would be explicitly talking about both the data structure and
+the way it was referenced. That seems inconsistent.
+
+This leads back to a modifier on the `struct` keyword. You really are declaring a value type. It is
+just that the value type is affine. Indeed, in Rust, this is called a `struct`. (Rust being the
+major language with affine types. Though Swift now had `~Copyable` structs.) The best possibilities
+for modifiers were: `identity struct`, `move struct`, and `affine struct`. The `identity struct`
+keyword comes from the idea that this is a value type with an identity. That has the advantage of
+naming what it is rather than what you can do with it. It is consistent with how Java is introducing
+value types as classes without identity. But it isn't immediately obvious while being familiar
+enough that people might expect they know what it means. It doesn't signify how different these are.
+The `move struct` name is good in that it reuses an existing keyword in a way that makes sense. It
+is a struct that must be moved. Note that this no longer conflicts with "move types" as those have
+been replaced with `drop` types. But again, it isn't immediately obvious while being familiar enough
+that people might expect they know what it means. It doesn't signify how different these are. That
+is how we come to `affine struct`. This name is precise in the sense that this is the proper term
+for the type. It is different enough that most developers will be struck that this is something
+unique and different they will need to learn and understand. One might think `linear struct` would
+be better since these are colloquy referred to as "linear types" even though those are technically
+types that must be used exactly once. But that could easily be confusing since it sounds like the
+struct itself is somehow linear (e.g. maybe it has a linear layout).
+
+Thus the new terminology will be:
+
+| Type      | Declaration   | Singleton |
+| --------- | ------------- | --------- |
+| Reference | `class`       | `object`  |
+| Value     | `struct`      | `value`   |
+| Hybrid    | `move struct` | N/A       |
 
 ## Variable References
 

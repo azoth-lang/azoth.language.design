@@ -176,11 +176,11 @@ struct itself is somehow linear (e.g. maybe it has a linear layout).
 
 Thus the new terminology will be:
 
-| Type      | Declaration   | Singleton |
-| --------- | ------------- | --------- |
-| Reference | `class`       | `object`  |
-| Value     | `struct`      | `value`   |
-| Hybrid    | `move struct` | N/A       |
+| Type      | Declaration     | Singleton |
+| --------- | --------------- | --------- |
+| Reference | `class`         | `object`  |
+| Value     | `struct`        | `value`   |
+| Hybrid    | `affine struct` | N/A       |
 
 ## Variable References
 

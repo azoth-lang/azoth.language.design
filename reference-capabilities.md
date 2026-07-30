@@ -1,5 +1,15 @@
 # Reference Capabilities and Movement
 
+Contents:
+
+* [Class Capabilities](#class-capabilities)
+* [Mutability is Distinct from Exclusive Access](#mutability-is-distinct-from-exclusive-access)
+* [Mutate Expressions](#mutate-expressions)
+* [No Exclusive Mutation](#no-exclusive-mutation)
+* [Independence Distinct from Variance](#independence-distinct-from-variance)
+* [Why `id`](#why-id)
+* [Isolated Locals](#isolated-locals)
+
 ## Class Capabilities
 
 It might be thought that classes should be able to be marked `iso`, `mut`, or read-only in addition
@@ -148,3 +158,12 @@ Reasons to have id:
     non-constant one? (But what about equivalence of nullable references? Or some other user type
     that made sense because it carried a reference? For example, a value carrying a reference and
     comparing them by the reference.)
+
+## Isolated Locals
+
+Perhaps `iso` should not be allowed on local variables. This is because using an isolated variable
+always requires that it be aliased. The one exception might be returning an isolated variable, but
+there is already an implicit move when returning to isolated. So, to avoid confusion one could
+simply outlaw iso on local variables. What is odd about that is that parameters are also local
+variables and they can be isolated. It also may help expressivity to be able to declare a variable
+`iso` and communicate to the reader that the value is isolated when initially assigned.

@@ -68,5 +68,5 @@ worth implementing it now. Likewise private inheritance would add more complexit
 than seems worth it for the feature. Even if it were added, there would be issues for the important
 use case of `Unsafe_Hybrid_Array`. For now, the decision has been made to simply not support this
 feature. `Hybrid_Array` will be implemented as a value type. This will allow for safe expansion
-later since value types are more restricted that other types. If private inheritance or field
+later since value types are more restricted than other types. If private inheritance or field
 inlining is added, then it will be possible to change `Hybrid_Array` to a class and recompile.

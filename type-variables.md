@@ -8,7 +8,7 @@ variables.
 For a long time, I was confused about when one should use an associated type vs a generic type
 parameter. The rule I had learned that seemed to make sense was that generic type parameters are for
 inputs and associated types are for outputs[^output1][^output2]. The other rule given was that you
-use associated types when it only makes sense to implement the trait once [^once1][^once2][^once2].
+use associated types when it only makes sense to implement the trait once [^once1][^once2][^once3].
 However, these never seemed to give clear guidance. Both of the two criteria seem to be too
 subjective and ill defined. In particular the Rust [Iterator
 trait](https://doc.rust-lang.org/std/iter/trait.Iterator.html) is an example where many sources
@@ -61,6 +61,33 @@ where F: FnMut(I::Item) -> B
 Swift does a similar thing since they do not allow true generic protocol types. But they have
 confused the issue with the introduction of their shorthand syntax for specifying associated types
 which allows `IteratorProtocol<Element>`.
+
+### Reconsidering Generic Type Parameters with Associated Types
+
+In Azoth and C#, associated/static members have access to the generic type parameter. The two
+examples given are confused by the fact that I don't think the iterator element type should be an
+associated type. However, if associated types are just associated members then it should be valid to
+reference generic parameters from their declarations. Consider this hypothetical Azoth code:
+
+```azoth
+public trait Trait
+{
+    public abstract type alias A;
+}
+
+public class Class[T]: Trait
+{
+    public type alias A = T;
+}
+```
+
+I am not sure how that would be used in a real program and is a little odd. But it seems like it
+should be valid and safe. If one has a type variable `X: Trait`, then `X.A` will be a specific type
+even if `X` is passed `Class[int]`.
+
+One might think that if you implement a trait more than once (because it has a generic parameter)
+that all copies of the associated type must be the same. But with Azoth's `overrides` capability, it
+is natural that one could provide separate overrides for the two.
 
 [^output1]: https://www.reddit.com/r/rust/comments/waxk1l/comment/ii3yulk/
 [^output2]: "The use of "Associated types" improves the overall readability of code by moving inner types locally into a trait as output types" [Rust By Example: Associated types](https://doc.rust-lang.org/rust-by-example/generics/assoc_items/types.html)

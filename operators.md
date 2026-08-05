@@ -1,5 +1,16 @@
 # Operators
 
+Contents:
+
+* [Range Operator](#range-operator)
+* [Accept Operator](#accept-operator)
+* [Overload Not a Trait Implementation](#overload-not-a-trait-implementation)
+* [Operator Overloading](#operator-overloading)
+  * [Overloaded Operator Operand Placeholders](#overloaded-operator-operand-placeholders)
+  * [Operator Overloads Not Functions](#operator-overloads-not-functions)
+  * [Operators As Instance Or Associated](#operators-as-instance-or-associated)
+* [Operators as Functions and Infix Functions](#operators-as-functions-and-infix-functions)
+
 ## Range Operator
 
 There were many options for the range operator syntax. Initially, it was thought it should be
@@ -35,7 +46,9 @@ have the same semantics. However, just like method names, the same operator can 
 meanings in different contexts. Indeed, a given operator may have different pre- and post-
 conditions on different types.
 
-## Overloaded Operator Operand Placeholders
+## Operator Overloading
+
+### Overloaded Operator Operand Placeholders
 
 Inspired by the Agda language there had been thought of using `_` as a placeholder in operator
 overload declarations. At first, this was considered only to support future expansion of the
@@ -46,6 +59,42 @@ forms to the placeholder was needed to distinguish these. Then it was further re
 were both nullary and binary forms of these operators. Thus `..` would be a nullary operator while
 `_.._` would be a binary operator. For consistency, it then made the most sense to require the
 placeholders for all binary operators.
+
+### Operator Overloads Not Functions
+
+Operator overloads are not standalone functions. One might think that is a reasonable design.
+However, Swift got bitten by it because overload resolution can take too long. There are simply too
+many possible overloads of each binary operator. Additionally, it introduces the problem of
+extending existing types. Given types `A` and `B` what library can declare an operator on them. If
+operator overloads are standalone functions, then any package can. If they are methods, then only
+the two declaring the types can. The types can be extended to add an operator, but that extension
+can't be published by a third-party package that doesn't declare either type.
+
+### Operators As Instance Or Associated
+
+C++ had problems with operators as instance members and decided on a convention of not declaring
+them as instance methods. For binary operators polymorphism can cause problems. Both C# and Swift
+make operators associated members. But C# took too long to allow associated members in interfaces.
+Swift supported that from the beginning. But both have issues with abstract associated members being
+used in certain generic contexts. Also, equality and comparison may support polymorphism. One
+possibility is to have the equality and comparison operators immediately forward to protected
+instance members. That way they can be polymorphic and are not abstract on the trait. That could
+still limit the use of traits containing abstract math operators. Having them be associated members
+does avoid the need to have special syntax for declaring that self is the second parameter.
+
+The issue with having binary operators be methods isn't simply that the method could be called
+either on the left or right argument. Rather it is that the method being virtual means the
+implementation chosen depends on which argument is placed first even though the operators are meant
+to be commutative. Of course, that is fundamentally a bad operator overload implementation. But
+using associated members reflects that operators should not be polymorphic in that way and if
+polymorphism is desired, then special work must be done (e.g. forwarding to protected members and
+doing something like the `can_equal` method).
+
+It was thought that using instance methods for operators would avoid the issue of having abstract
+associated members. However, you at least partially still have that issue with the current design.
+The plan is that `Equatable` will use an associated type `Domain` to specify what equality
+comparison is over. But that associated type will be abstract in `Equatable`. This will limit the
+use of `Equatable[T]` in generic arguments the same way other abstract associated members would.
 
 ## Operators as Functions and Infix Functions
 

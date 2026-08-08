@@ -1,5 +1,21 @@
 # Classes and Structs
 
+Contents:
+
+* [Value Types](#value-types)
+* [New Operator](#new-operator)
+  * [`new` Everywhere](#new-everywhere)
+  * [`new` for Classes](#new-for-classes)
+  * [No `new`](#no-new)
+* [All Methods Must Have a Unique Implementation](#all-methods-must-have-a-unique-implementation)
+* [Private](#private)
+* [Override Fields](#override-fields)
+* [Against Convenience Initializers and Initializer Inheritance](#against-convenience-initializers-and-initializer-inheritance)
+* [Class Inheritance](#class-inheritance)
+* [Inherits Keyword](#inherits-keyword)
+* [Unique Most Derived Binding](#unique-most-derived-binding)
+* [Base Member Access](#base-member-access)
+
 ## Value Types
 
 The `value` and `struct` keywords are used to define value types. Originally, Azoth was not going to
@@ -134,12 +150,9 @@ Having initializers that call other initializers instead of the base class initi
 However, C# demonstrates that can be achieved without the complexity introduced in Swift. If you try
 to read the docs on
 [Initialization](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/)
-in Swift, esp. the sections [Initializer Delegation for Class
-Types](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/#Initializer-Delegation-for-Class-Types),
-[Initializer Inheritance and
-Overriding](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/#Initializer-Inheritance-and-Overriding),
-and [Automatic Initializer
-Inheritance](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/#Automatic-Initializer-Inheritance)
+in Swift, esp. the sections [Initializer Delegation for Class Types](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/#Initializer-Delegation-for-Class-Types),
+[Initializer Inheritance and Overriding](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/#Initializer-Inheritance-and-Overriding),
+and [Automatic Initializer Inheritance](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/initialization/#Automatic-Initializer-Inheritance)
 you'll see the amount of confusing complexity these features add. That seems complex and difficult
 to keep straight in one's head.
 
@@ -152,8 +165,8 @@ percentage of all types then. So in that small percentage of cases, you have avo
 redeclare a few constructors on the subclass? Sure, that is nice, but not high-value. Not something
 you can't live without.
 
-The only answer I've found so far is that Objective-C had a similar feature of initializer
-inheritance.
+Why does Swift have convenience initializers? The only answer I've found so far is that Objective-C
+had a similar feature of initializer inheritance.
 
 ## Class Inheritance
 
@@ -217,3 +230,27 @@ Instead some other syntax is needed. Options included `derives`, `extends` and `
 confusing. Instead, `inherits` was chosen. It properly conveys that fields and members are being
 inherited. It also aligns the syntax weight with the fact that true inheritance should be used less
 frequently that implementing traits.
+
+## Unique Most Derived Binding
+
+It was decided that all types should have a unique most derived binding for all members both
+instance and associated. The reason for this is that it simplifies the language and makes the rule
+straightforward for developers. Java already enforces this rule for default implementations in
+interfaces. Eiffel likewise enforces this at every type. So it is a proof that the rule isn't too
+onerous. It would also be easier to relax the rule in the future rather than to add it back if it
+were absent. It also makes classes and traits consistent in a way that makes sense since all classes
+define an implicit trait.
+
+## Base Member Access
+
+Access to base members has been limited to the base class and direct traits for several reasons.
+First, it makes the language simpler and the mental model for developers more straightforward. One
+doesn't need to think about whether a base class class will invoke the implementation at the type or
+the override. Clearly, we are calling the implementation as it appears on the base type (or trait).
+Second, this allows base classes to override members to enforce invariants and not have a subclass
+skip over their override and break the invariant. There are two places this could be an issue. The
+first is when a base does an abstract override and the subclass would still like to be able to get
+to the implementation that is hidden. The base class can avoid a situation like this by making its
+override `required` instead of abstract. The second is when the implicit trait of a class overrides
+base implementations but is abstract since the class method is not marked `trait`. This could be an
+issue and may require some flexibility or work around in this case.

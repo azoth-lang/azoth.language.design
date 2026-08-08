@@ -81,19 +81,33 @@ desired, a syntax for it could be added. For example perhaps `Foo?()` would be a
 
 ## All Methods Must Have a Unique Implementation
 
-Given a method `M` in interface `A` and interfaces `B` and `C` that implement `A` and override `M`,
-a class `D` that implements `B` and `C` must override `M` to provide a unique implementation of `M`
-to be called. This applies even if `B` and `C` rename `M`. At first glance this seems a strange
-restriction to place. However, since Azoth is trying to not lock in an implementation, this
-restriction ensures certain implementations are possible, and can be safely removed in the future if
-desired. Specifically, it enables a vtable implementation where every method across all classes is
-assigned a unique slot and there is only one vtable pointer in an object. If this restriction were
-not in place, it would then be ambiguous which method pointer to put in the `M` vtable slot for
-class `D`.
+Given a method `m` in trait `A` and traits `B` and `C` that implement `A` and override `m`, a class
+`D` that implements `B` and `C` must override `m` to provide a unique implementation of `m` to be
+called. This applies even if `B` and `C` rename `m`. This is necessary because it must be determined
+what method to call when an instance of `D` is accessed through a variable of type `A`.
 
-**TODO:** but generic interfaces can mean that you implement an interface twice with different
-parameters and a method becomes overloaded on the generic parameter type. So there is already not a
-unique slot for each method.
+```azoth
+public trait A
+{
+    public fn m(self) -> string;
+}
+public trait B: A
+{
+    public fn m_b(self) -> string overrides m => "B";
+}
+public trait C: A
+{
+    public fn m_c(self) -> string overrides m => "C";
+}
+public class D: B, C
+{
+    private fn m(self) -> string overrides A:: => base[B].m_b();
+}
+```
+
+This also enables a vtable implementation where every method across all classes is assigned a unique
+slot and there is only one vtable pointer in an object. If this restriction were not in place, it
+would then be ambiguous which method pointer to put in the `m` vtable slot for class `D`.
 
 ## Private
 

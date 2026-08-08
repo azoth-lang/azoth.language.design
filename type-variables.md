@@ -23,6 +23,9 @@ An associated type is a `static` (C# sense) type property. It should be used whe
 fully determines the type in question. The associated type is not specific to any one instance.
 Generic type parameters are essentially parameters to the constructor and specific to each instance.
 
+**Addendum**: But even in C#, static members have access to generic parameters so is it correct to
+think of generic parameters as parameters to the constructor?
+
 For example, in a red-green tree, the type of the red node that corresponds to any green node is a
 property of the node type. This also explains why associated types can be accessed as properties of
 type they are on (e.g. *`ConcreteGreenNode`*`.RedNode`). It is hard to find good examples online
@@ -33,7 +36,7 @@ values stored at nodes in the graph. Either, the type is really a value type in 
 continue to be a generic parameter. Or the node type is a true node type in which case it should
 probably be parameterized on the value type. The other good example I am aware of was for units of
 measure. But I cannot remember the exact scenario. It was something like making an interface for
-fractional quantities that had an associated type for the result to rounding to a countable (e.g.
+fractional quantities that had an associated type for the result of rounding to a countable (e.g.
 `FractionalEvents` always rounds to `Events`). I think something similar happened when trying to
 support euclidean norm in a generic way. There was no general way to express that `Length` *
 `Length` gave `Area` and the square root of area was `Length`.

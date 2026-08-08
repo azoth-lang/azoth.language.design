@@ -299,30 +299,29 @@ self)` can be called on an `iso` instance since `iso <: mut` and recovery makes 
 the `iso` later if needed. However, there are times where this isn't sufficient. To support these
 cases, a capability set may be used on the self parameter. This effectively makes the method generic
 over the capability of the self parameter. Other types can then be constrained/modified by the
-capability the method was called on via a viewpoint type. For example, `get property(readable
-self) -> self |> mut Shape` declares a property which can be called on a reference so long as it can
-be read from (i.e. not `id`). The return type then varies with the capability the method was called
-on. For example, when called on a `mut` reference, the return type with be `mut Shape` but when
-called on a `const` reference the return type with be a `const Shape`. These features allow both
-more flexibility in what methods can do and avoids needing to declare many overloads that would be
+capability the method was called on via a viewpoint type. For example, `get property(readable self)
+-> self.mut Shape` declares a property which can be called on a reference so long as it can be read
+from (i.e. not `id`). The return type then varies with the capability the method was called on. For
+example, when called on a `mut` reference, the return type with be `mut Shape` but when called on a
+`const` reference the return type with be a `const Shape`. These features allow both more
+flexibility in what methods can do and avoids needing to declare many overloads that would be
 identical except for capability differences.
 
 ### Combining Capabilities
 
 There are three ways to manipulate the capabilities of regular generic types. The first way is a
 *capability viewpoint*. Consider a regular generic type `T` with a reified/captured capability. For
-a capability *c*, the type `c |> T` is the type that would result from accessing a field of type `T`
+a capability *c*, the type `c.T` is the type that would result from accessing a field of type `T`
 from an instance with the capability of *c*. Capability viewpoints can't be applied to regular types
-because they would simply evaluate to a different capability. For example, `const |> mut Shape` is
-just the type `const Shape`.
+because they would simply evaluate to a different capability. For example, `const.mut Shape` is just
+the type `const Shape`.
 
-The second, self viewpoint types, was discussed in the previous section. The type `self |> T` is the
+The second, self viewpoint types, was discussed in the previous section. The type `self.T` is the
 type that would result from accessing a field of type `T` from an instance with the capability of
-`self`. If `self` is known to have a specific capability *c*, then this is equivalent to `c |> T`.
-However, the self parameter can also be constrained by a capability set. In that case, `self |> T`
-will be whatever type would result from the capability of the reference the method was called on.
-This possibility means that self viewpoints can be combined with regular types (e.g. `self |> mut
-Shape`).
+`self`. If `self` is known to have a specific capability *c*, then this is equivalent to `c.T`.
+However, the self parameter can also be constrained by a capability set. In that case, `self.T` will
+be whatever type would result from the capability of the reference the method was called on. This
+possibility means that self viewpoints can be combined with regular types (e.g. `self.mut Shape`).
 
 The third way is that a generic parameter type can be constrained to a capability set. The
 capability will be upcast if necessary to make it fit in that set. For example, the type `sendable
@@ -332,7 +331,7 @@ different capability.
 
 One interesting thing to note is that because `Self` is an associated type without a capability, it
 cannot be used as a stand in for the full type of the self reference. Instead that type is
-effectively the type `self |> iso Self`.
+effectively the type `self.iso Self`.
 
 ## Independent Parameters
 

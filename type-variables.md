@@ -89,6 +89,25 @@ One might think that if you implement a trait more than once (because it has a g
 that all copies of the associated type must be the same. But with Azoth's `overrides` capability, it
 is natural that one could provide separate overrides for the two.
 
+### Re-reconsidering Generic Type Parameters with Associated Types
+
+The argument against the below code is that an associated type is a bare type while a generic type
+has a baked in reference capability. When doing `A = T` are you somehow throwing away the
+capability? What can the relationship between `A` and `T` really be since you don't know the
+capability of `T`?
+
+```azoth
+public trait Trait
+{
+    public abstract type alias A;
+}
+
+public class Class[T]: Trait
+{
+    public type alias A = T;
+}
+```
+
 [^output1]: https://www.reddit.com/r/rust/comments/waxk1l/comment/ii3yulk/
 [^output2]: "The use of "Associated types" improves the overall readability of code by moving inner types locally into a trait as output types" [Rust By Example: Associated types](https://doc.rust-lang.org/rust-by-example/generics/assoc_items/types.html)
 [^once1]: Most comments on [What is the difference between associated types and generics?](https://www.reddit.com/r/rust/comments/waxk1l/what_is_the_difference_between_associated_types/)
